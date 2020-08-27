@@ -1,8 +1,8 @@
 CC=gcc
 CFLAGS=-Wall -Werror
 
-DEPS=error.h lexer.h parser.h
-OBJS=lexer.o parser.o ponyo.o
+DEPS=error.h eval.h lexer.h parser.h
+OBJS=eval.o lexer.o parser.o ponyo.o
 PROG=ponyo
 
 %.o: %.c $(DEPS)
