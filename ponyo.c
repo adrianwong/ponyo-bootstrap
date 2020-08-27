@@ -2,6 +2,9 @@
 #include <stdlib.h>
 
 #include "error.h"
+#include "eval.h"
+#include "lexer.h"
+#include "parser.h"
 
 static char* read_file(const char* file_path) {
     FILE* file = fopen(file_path, "rb");
@@ -32,11 +35,23 @@ static char* read_file(const char* file_path) {
     return buffer;
 }
 
+static void interpret(const char* source) {
+    init_lexer(source);
+
+    for (;;) {
+        Expr* e = parse_expr();
+        if (e != NULL) {
+            print_expr(eval(e));
+        } else {
+            return;
+        }
+    }
+}
+
 static void run_file(const char* file_path) {
     char* source = read_file(file_path);
 
-    // Just print contents of buffer for now.
-    printf("%s", source);
+    interpret(source);
 
     free(source);
 }
