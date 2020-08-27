@@ -11,4 +11,11 @@
     exit(code);                   \
 }
 
+#define DATA_ERROR(line, ...) {                 \
+    fprintf(stderr, "error: [line %d] ", line); \
+    fprintf(stderr, __VA_ARGS__);               \
+    fprintf(stderr, "\n");                      \
+    exit(EX_DATAERR);                           \
+}
+
 #endif // ERROR_H
