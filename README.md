@@ -4,6 +4,13 @@ __ponyo-bootstrap__ is an interpreter for a limited subset of Scheme, written
 in C. Its raison d'être is to bootstrap __ponyo__, a self-hosting Scheme-to-?
 compiler.
 
+## Usage
+
+```
+$ make
+$ ./ponyo-bootstrap path/to/file.scm
+```
+
 ## Inspiration / Resources
 
 * [Crafting Interpreters][1]
