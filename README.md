@@ -11,6 +11,12 @@ $ make
 $ ./ponyo-bootstrap path/to/file.scm
 ```
 
+## Run tests
+
+```
+$ make test
+```
+
 ## Inspiration / Resources
 
 * [Crafting Interpreters][1]

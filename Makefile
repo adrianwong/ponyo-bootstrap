@@ -11,5 +11,8 @@ PROG=ponyo
 $(PROG): $(OBJS)
 	$(CC) -o $@ $^ $(CFLAGS)
 
+test: $(PROG)
+	@./runtests.sh
+
 clean:
 	rm -f $(OBJS) $(PROG)
