@@ -4,7 +4,8 @@
 #include <stdbool.h>
 
 typedef enum {
-    EXPR_BOOL
+    EXPR_BOOL,
+    EXPR_CHAR
 } ExprType;
 
 typedef struct {
@@ -12,9 +13,15 @@ typedef struct {
     bool value;
 } Bool;
 
+typedef struct {
+    ExprType type;
+    char value;
+} Char;
+
 typedef union {
     ExprType type;
     Bool b;
+    Char c;
 } Expr;
 
 Expr* parse_expr(void);

@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 
 #include "error.h"
 #include "lexer.h"
@@ -18,6 +19,10 @@ void init_lexer(const char* source) {
 }
 
 /******************************************************************************/
+
+static bool is_alpha(char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
 
 static bool is_comment(char c) { return c == ';'; }
 
@@ -69,20 +74,32 @@ static Token make_token(TokenType type) {
     return t;
 }
 
-static Token boolean(void) {
-    char c = peek();
+static Token character(void) {
+    if (at_end()) { DATA_ERROR(lexer.line, "dangling '#\\'"); }
 
+    char c = advance();
+    // Handle character names.
+    if (is_alpha(c)) {
+        while (is_alpha(peek())) { advance(); }
+    }
+
+    return make_token(TOK_CHAR);
+}
+
+static Token boolean_or_character(void) {
     // Handle dangling `#`. R6RS supports `#;`, we don't.
-    if (is_whitespace(c) || is_comment(c) || at_end()) {
+    if (is_whitespace(peek()) || is_comment(peek()) || at_end()) {
         DATA_ERROR(lexer.line, "dangling '#'");
     }
 
-    advance();
+    char c = advance();
     switch (c) {
     case 't':
         return make_token(TOK_TRUE);
     case 'f':
         return make_token(TOK_FALSE);
+    case '\\':
+        return character();
     default:
         DATA_ERROR(lexer.line, "invalid sequence '#%c'", c);
     }
@@ -98,7 +115,7 @@ Token token(void) {
     char c = advance();
     switch (c) {
     case '#':
-        return boolean();
+        return boolean_or_character();
     default:
         DATA_ERROR(lexer.line, "unexpected character '%c'", c);
     }

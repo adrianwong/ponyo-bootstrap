@@ -1,0 +1,4 @@
+error: [line 1] invalid character name '#\newLine'
+#\s
+#\space
+#\n
