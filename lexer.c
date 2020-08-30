@@ -26,6 +26,8 @@ static bool is_alpha(char c) {
 
 static bool is_comment(char c) { return c == ';'; }
 
+static bool is_digit(char c) { return '0' <= c && c <= '9'; }
+
 static bool is_whitespace(char c) {
     return c == ' ' || c == '\t' || c == '\r' || c == '\n';
 }
@@ -105,6 +107,12 @@ static Token boolean_or_character(void) {
     }
 }
 
+static Token integer(void) {
+    while (is_digit(peek())) { advance(); }
+
+    return make_token(TOK_INT);
+}
+
 static Token string(void) {
     while (peek() != '"') {
         if (at_end()) { DATA_ERROR(lexer.line, "unterminated string"); }
@@ -131,11 +139,16 @@ Token token(void) {
     if (at_end()) { return make_token(TOK_EOF); }
 
     char c = advance();
+
+    if (is_digit(c)) { return integer(); }
+
     switch (c) {
     case '#':
         return boolean_or_character();
     case '"':
         return string();
+    case '-':
+        if (is_digit(peek())) { return integer(); }
     default:
         DATA_ERROR(lexer.line, "unexpected character '%c'", c);
     }

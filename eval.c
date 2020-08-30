@@ -10,6 +10,7 @@ Expr* eval(Expr* expr) {
     case EXPR_BOOL:
     case EXPR_CHAR:
     case EXPR_STRING:
+    case EXPR_INT:
         return expr;
     }
 }
@@ -71,6 +72,12 @@ static void print_string(Expr* e) {
     printf("\"\n");
 }
 
+static void print_int(Expr* e) {
+    assert(e->type == EXPR_INT);
+
+    printf("%d\n", e->i.value);
+}
+
 void print_expr(Expr* expr) {
     assert(expr != NULL);
 
@@ -83,6 +90,9 @@ void print_expr(Expr* expr) {
         break;
     case EXPR_STRING:
         print_string(expr);
+        break;
+    case EXPR_INT:
+        print_int(expr);
         break;
     }
 }

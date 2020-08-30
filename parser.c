@@ -61,6 +61,31 @@ static Expr* make_string(Token t) {
     return e;
 }
 
+static Expr* make_int(Token t) {
+    assert(t.length >= 1);
+
+    const char* c = t.start;
+    int sign = 1;
+    if (*c == '-') {
+        assert(t.length >= 2);
+        c++;
+        sign = -1;
+    }
+
+    int value = 0;
+    while (c < t.start + t.length) {
+        value = value * 10 + (*c - '0');
+        c++;
+    }
+
+    // No GC... yet.
+    Expr* e = (Expr*)malloc(sizeof(Expr));
+    e->i.type = EXPR_INT;
+    e->i.value = sign * value;
+
+    return e;
+}
+
 Expr* parse_expr(void) {
     Token t = token();
     switch (t.type) {
@@ -72,6 +97,8 @@ Expr* parse_expr(void) {
         return make_char(t);
     case TOK_STRING:
         return make_string(t);
+    case TOK_INT:
+        return make_int(t);
     case TOK_EOF:
         return NULL;
     }

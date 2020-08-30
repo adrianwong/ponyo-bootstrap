@@ -6,7 +6,8 @@
 typedef enum {
     EXPR_BOOL,
     EXPR_CHAR,
-    EXPR_STRING
+    EXPR_STRING,
+    EXPR_INT
 } ExprType;
 
 typedef struct {
@@ -24,11 +25,17 @@ typedef struct {
     char* value;
 } String;
 
+typedef struct {
+    ExprType type;
+    int value;
+} Int;
+
 typedef union {
     ExprType type;
     Bool b;
     Char c;
     String s;
+    Int i;
 } Expr;
 
 Expr* parse_expr(void);
