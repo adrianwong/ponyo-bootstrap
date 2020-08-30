@@ -105,6 +105,24 @@ static Token boolean_or_character(void) {
     }
 }
 
+static Token string(void) {
+    while (peek() != '"') {
+        if (at_end()) { DATA_ERROR(lexer.line, "unterminated string"); }
+
+        if (peek() == '\\' && peek_next() == '"') {
+            // Consume escaped quote.
+            if (peek_next() == '"') { advance(); }
+        } else if (peek() == '\n') {
+            lexer.line++;
+        }
+
+        advance();
+    }
+    advance(); // Consume closing quote.
+
+    return make_token(TOK_STRING);
+}
+
 Token token(void) {
     skip_whitespace_and_comments();
 
@@ -116,6 +134,8 @@ Token token(void) {
     switch (c) {
     case '#':
         return boolean_or_character();
+    case '"':
+        return string();
     default:
         DATA_ERROR(lexer.line, "unexpected character '%c'", c);
     }

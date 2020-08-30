@@ -45,6 +45,22 @@ static Expr* make_char(Token t) {
     return e;
 }
 
+static Expr* make_string(Token t) {
+    assert(t.length >= 2); // Opening and closing quotes.
+    assert(t.start[0] == '"' && t.start[t.length - 1] == '"');
+
+    // No GC... yet.
+    Expr* e = (Expr*)malloc(sizeof(Expr));
+    e->s.type = EXPR_STRING;
+
+    int length = t.length - 1; // -2 to omit quotes, +1 for null terminator.
+    e->s.value = (char*)malloc(length);
+    memcpy(e->s.value, t.start + 1, length);
+    e->s.value[length - 1] = '\0';
+
+    return e;
+}
+
 Expr* parse_expr(void) {
     Token t = token();
     switch (t.type) {
@@ -54,6 +70,8 @@ Expr* parse_expr(void) {
         return make_bool(false);
     case TOK_CHAR:
         return make_char(t);
+    case TOK_STRING:
+        return make_string(t);
     case TOK_EOF:
         return NULL;
     }

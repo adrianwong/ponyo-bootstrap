@@ -5,6 +5,7 @@ typedef enum {
     TOK_TRUE,
     TOK_FALSE,
     TOK_CHAR,
+    TOK_STRING,
     TOK_EOF
 } TokenType;
 
