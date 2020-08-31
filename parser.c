@@ -6,9 +6,16 @@
 #include "lexer.h"
 #include "parser.h"
 
-static Expr* make_bool(bool b) {
+static Expr* malloc_expr() {
     // No GC... yet.
     Expr* e = (Expr*)malloc(sizeof(Expr));
+    if (e == NULL) { ERROR(EX_IOERR, "error: out of memory"); }
+
+    return e;
+}
+
+static Expr* make_bool(bool b) {
+    Expr* e = malloc_expr();
     e->b.type = EXPR_BOOL;
     e->b.value = b;
 
@@ -37,8 +44,7 @@ static Expr* make_char(Token t) {
         }
     }
 
-    // No GC... yet.
-    Expr* e = (Expr*)malloc(sizeof(Expr));
+    Expr* e = malloc_expr();
     e->c.type = EXPR_CHAR;
     e->c.value = c;
 
@@ -49,12 +55,12 @@ static Expr* make_string(Token t) {
     assert(t.length >= 2); // Opening and closing quotes.
     assert(t.start[0] == '"' && t.start[t.length - 1] == '"');
 
-    // No GC... yet.
-    Expr* e = (Expr*)malloc(sizeof(Expr));
+    Expr* e = malloc_expr();
     e->s.type = EXPR_STRING;
 
     int length = t.length - 1; // -2 to omit quotes, +1 for null terminator.
     e->s.value = (char*)malloc(length);
+    if (e->s.value == NULL) { ERROR(EX_IOERR, "error: out of memory"); }
     memcpy(e->s.value, t.start + 1, length);
     e->s.value[length - 1] = '\0';
 
@@ -78,8 +84,7 @@ static Expr* make_int(Token t) {
         c++;
     }
 
-    // No GC... yet.
-    Expr* e = (Expr*)malloc(sizeof(Expr));
+    Expr* e = malloc_expr();
     e->i.type = EXPR_INT;
     e->i.value = sign * value;
 
