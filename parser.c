@@ -6,18 +6,14 @@
 #include "lexer.h"
 #include "parser.h"
 
+// Constants.
+static Expr* TRUE = &(Expr){ .b.type = EXPR_BOOL, .b.value = true };
+static Expr* FALSE = &(Expr){ .b.type = EXPR_BOOL, .b.value = false };
+
 static Expr* malloc_expr() {
     // No GC... yet.
     Expr* e = (Expr*)malloc(sizeof(Expr));
     if (e == NULL) { ERROR(EX_IOERR, "error: out of memory"); }
-
-    return e;
-}
-
-static Expr* make_bool(bool b) {
-    Expr* e = malloc_expr();
-    e->b.type = EXPR_BOOL;
-    e->b.value = b;
 
     return e;
 }
@@ -95,9 +91,9 @@ Expr* parse_expr(void) {
     Token t = token();
     switch (t.type) {
     case TOK_TRUE:
-        return make_bool(true);
+        return TRUE;
     case TOK_FALSE:
-        return make_bool(false);
+        return FALSE;
     case TOK_CHAR:
         return make_char(t);
     case TOK_STRING:
