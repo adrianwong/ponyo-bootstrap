@@ -26,25 +26,25 @@ static void print_bool(Expr* e) {
 static void print_char(Expr* e) {
     assert(e->type == EXPR_CHAR);
 
-    char* cs;
+    printf("#\\");
     switch (e->c.value) {
     case ' ':
-        cs = "space";
+        printf("space");
         break;
     case '\t':
-        cs = "tab";
+        printf("tab");
         break;
     case '\r':
-        cs = "return";
+        printf("return");
         break;
     case '\n':
-        cs = "newline";
+        printf("newline");
         break;
     default:
-        cs = &e->c.value;
+        printf("%c", e->c.value);
         break;
     }
-    printf("#\\%s\n", cs);
+    printf("\n");
 }
 
 static void print_string(Expr* e) {
