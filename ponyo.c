@@ -11,7 +11,7 @@ static void interpret(const char* source) {
     init_lexer(source);
 
     for (;;) {
-        Expr* e = parse_expr();
+        Expr* e = parse_expr(token());
         if (e != NULL) {
             print_expr(eval(e));
         } else {

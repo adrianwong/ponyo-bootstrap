@@ -92,8 +92,18 @@ static Expr* make_int(Token t) {
     return e;
 }
 
-Expr* parse_expr(void) {
+static Expr* make_quote(void) {
     Token t = token();
+    if (t.type == TOK_EOF) { DATA_ERROR(t.line, "dangling quote"); }
+
+    Expr* e = malloc_expr();
+    e->q.type = EXPR_QUOTE;
+    e->q.value = parse_expr(t);
+
+    return e;
+}
+
+Expr* parse_expr(Token t) {
     switch (t.type) {
     case TOK_TRUE:
         return TRUE;
@@ -105,6 +115,8 @@ Expr* parse_expr(void) {
         return make_string(t);
     case TOK_INT:
         return make_int(t);
+    case TOK_QUOTE:
+        return make_quote();
     case TOK_EOF:
         return NULL;
     }

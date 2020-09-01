@@ -88,6 +88,17 @@ test string-empty '""' '""'
 test string-unterminated '"unterminated' 'error: [line 1] unterminated string'
 
 println
+test quote-bool "'#t" '#t'
+test quote-char "'#\a" '#\a'
+test quote-int "'12345" '12345'
+test quote-string "'\"string\"" '"string"'
+test quote-quote-bool "''#t" "'#t"
+test quote-quote-char "''#\a" "'#\a"
+test quote-quote "''" 'error: [line 1] dangling quote'
+test quote-dangling "'" 'error: [line 1] dangling quote'
+test quote-dangling-whitespace "'    " 'error: [line 1] dangling quote'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_redbold "test result: $errors failed"
     exit 1

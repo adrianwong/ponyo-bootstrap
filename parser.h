@@ -3,11 +3,16 @@
 
 #include <stdbool.h>
 
+#include "lexer.h"
+
+typedef union Expr Expr;
+
 typedef enum {
     EXPR_BOOL,
     EXPR_CHAR,
     EXPR_STRING,
-    EXPR_INT
+    EXPR_INT,
+    EXPR_QUOTE
 } ExprType;
 
 typedef struct {
@@ -30,14 +35,20 @@ typedef struct {
     int value;
 } Int;
 
-typedef union {
+typedef struct {
+    ExprType type;
+    Expr* value;
+} Quote;
+
+union Expr {
     ExprType type;
     Bool b;
     Char c;
     String s;
     Int i;
-} Expr;
+    Quote q;
+};
 
-Expr* parse_expr(void);
+Expr* parse_expr(Token t);
 
 #endif // PARSER_H

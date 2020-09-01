@@ -7,6 +7,7 @@ typedef enum {
     TOK_CHAR,
     TOK_STRING,
     TOK_INT,
+    TOK_QUOTE,
     TOK_EOF
 } TokenType;
 
