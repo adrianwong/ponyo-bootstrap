@@ -22,17 +22,22 @@ static Expr* make_char(Token t) {
     assert(t.length >= 3); // Hash, backslash, and at least one character.
     assert(t.start[0] == '#' && t.start[1] == '\\');
 
+    const char* sp = "#\\space";
+    const char* tb = "#\\tab";
+    const char* rt = "#\\return";
+    const char* nl = "#\\newline";
+
     char c;
     if (t.length == 3) {
         c = t.start[2];
     } else {
-        if (memcmp(t.start, "#\\space", t.length) == 0) {
+        if (memcmp(t.start, sp, strlen(sp)) == 0) {
             c = ' ';
-        } else if (memcmp(t.start, "#\\tab", t.length) == 0) {
+        } else if (memcmp(t.start, tb, strlen(tb)) == 0) {
             c = '\t';
-        } else if (memcmp(t.start, "#\\return", t.length) == 0) {
+        } else if (memcmp(t.start, rt, strlen(rt)) == 0) {
             c = '\r';
-        } else if (memcmp(t.start, "#\\newline", t.length) == 0) {
+        } else if (memcmp(t.start, nl, strlen(nl)) == 0) {
             c = '\n';
         } else {
             DATA_ERROR(t.line, "invalid character name '%.*s'",

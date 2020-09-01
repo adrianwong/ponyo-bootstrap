@@ -69,6 +69,7 @@ test char-n-newline '#\n#\newline' '#\n\n#\newline'
 test char-no-backslash '#a' "error: [line 1] invalid sequence '#a'"
 test char-dangling '#\' "error: [line 1] dangling '#\'"
 test char-case '#\Space' "error: [line 1] invalid character name '#\Space'"
+test char-spa '#\spac' "error: [line 1] invalid character name '#\spac'"
 
 println
 test int-pos '12345' '12345'
