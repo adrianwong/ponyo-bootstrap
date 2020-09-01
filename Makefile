@@ -6,7 +6,7 @@ OBJS=eval.o lexer.o parser.o ponyo.o
 PROG=ponyo
 
 %.o: %.c $(DEPS)
-	$(CC) -c -o $@ $<
+	$(CC) -c -o $@ $< $(CFLAGS)
 
 $(PROG): $(OBJS)
 	$(CC) -o $@ $^ $(CFLAGS)

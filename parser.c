@@ -103,4 +103,6 @@ Expr* parse_expr(void) {
     case TOK_EOF:
         return NULL;
     }
+
+    return NULL;
 }

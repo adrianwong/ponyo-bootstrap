@@ -13,6 +13,8 @@ Expr* eval(Expr* expr) {
     case EXPR_INT:
         return expr;
     }
+
+    return NULL;
 }
 
 /******************************************************************************/
