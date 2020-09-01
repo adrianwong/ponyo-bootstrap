@@ -1,3 +1,0 @@
-#\tAb
-#\reTURn
-#\nEwLiNe

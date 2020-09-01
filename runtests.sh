@@ -2,10 +2,6 @@
 
 prog=ponyo
 
-dir=tests
-ext=scm
-exp=exp
-
 green='\033[0;32m'
 greenbold='\033[1;32m'
 red='\033[0;31m'
@@ -19,30 +15,19 @@ println_red() { printf '%b%s%b\n' "$red" "$1" "$reset"; }
 println_redbold() { printf '%b%s%b\n' "$redbold" "$1" "$reset"; }
 
 errors=0
-for testfile in "$dir"/*."$ext"; do
-    basename=$(basename "$testfile")
-    filename=${basename%.$ext}
+padding=$(printf '.%.0s' {1..50})
+pattern='s/#\\/#\\\\/g'
 
-    padding=$(printf '.%.0s' {1..25})
-    printf 'testing %s %s ' "$filename" "${padding:${#filename}}"
+# test 'name' 'input' 'expected'
+function test() {
+    # Escape the '\' in '#\'.
+    escaped_2=$(echo "$2" | sed -E "$pattern")
+    escaped_3=$(echo "$3" | sed -E "$pattern")
 
-    if [ ! -f "$testfile" ]; then
-        println_redbold "ERROR [missing $testfile]"
+    printf 'testing %s %s ' "$1" "${padding:${#1}}"
 
-        errors=$((errors+1))
-        continue
-    fi
-
-    expfile="$dir/$filename.$exp"
-    if [ ! -f "$expfile" ]; then
-        println_redbold "ERROR [missing $expfile]"
-
-        errors=$((errors+1))
-        continue
-    fi
-
-    expected=$(cat "$expfile")
-    actual=$(./"$prog" "$testfile" 2>&1)
+    expected=$(printf '%b' "$escaped_3")
+    actual=$(printf '%b' "$escaped_2" | ./"$prog" 2>&1)
 
     if [ "$expected" = "$actual" ]; then
         println_greenbold 'ok'
@@ -61,12 +46,50 @@ for testfile in "$dir"/*."$ext"; do
 
         errors=$((errors+1))
     fi
-done
+}
+
+println
+test bool-t '#t' '#t'
+test bool-f '#f' '#f'
+test bool-t-f-nospace '#t#f' '#t\n#f'
+test bool-dangling '#' "error: [line 1] dangling '#'"
+
+println
+test char-a '#\a' '#\a'
+test char-semicolon '#\;' '#\;'
+test char-space '#\ ' '#\space'
+test char-tab '#\\t' '#\tab'
+test char-return '#\\r' '#\return'
+test char-newline '#\\n' '#\newline'
+test char-space-name '#\space' '#\space'
+test char-tab-name '#\tab' '#\tab'
+test char-return-name '#\return' '#\return'
+test char-newline-name '#\newline' '#\newline'
+test char-n-newline '#\n#\newline' '#\n\n#\newline'
+test char-no-backslash '#a' "error: [line 1] invalid sequence '#a'"
+test char-dangling '#\' "error: [line 1] dangling '#\'"
+test char-case '#\Space' "error: [line 1] invalid character name '#\Space'"
+
+println
+test int-pos '12345' '12345'
+test int-neg '-12345' '-12345'
+test int-pos-neg '12345 -12345' '12345\n-12345'
+# FIXME existing implementations treat '12345-12345' as an identifier.
+test int-pos-neg-nospace '12345-12345' '12345\n-12345'
+
+println
+test string-single '"string"' '"string"'
+test string-multi '"multiline\nstring"' '"multiline\\nstring"'
+test string-escape-single '"\"string"' '"\"string"'
+test string-escape-multi '"multiline\n\"string"' '"multiline\\n\"string"'
+test string-nospace '"string1""string2"' '"string1"\n"string2"'
+test string-empty '""' '""'
+test string-unterminated '"unterminated' 'error: [line 1] unterminated string'
 
 println
 if [ "$errors" -gt 0 ]; then
     println_redbold "test result: $errors failed"
     exit 1
 else
-    println_greenbold "test result: ok"
+    println_greenbold 'test result: ok'
 fi

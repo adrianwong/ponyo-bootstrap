@@ -1,4 +1,0 @@
-#\space
-#\tab
-#\return
-#\newline

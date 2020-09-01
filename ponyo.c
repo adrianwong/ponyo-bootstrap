@@ -1,11 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "error.h"
 #include "eval.h"
 #include "lexer.h"
 #include "parser.h"
 
+static void interpret(const char* source) {
+    init_lexer(source);
+
+    for (;;) {
+        Expr* e = parse_expr();
+        if (e != NULL) {
+            print_expr(eval(e));
+        } else {
+            return;
+        }
+    }
+}
+
+#ifndef PONYO_TEST
 static char* read_file(const char* file_path) {
     FILE* file = fopen(file_path, "rb");
     if (file == NULL) {
@@ -35,19 +50,6 @@ static char* read_file(const char* file_path) {
     return buffer;
 }
 
-static void interpret(const char* source) {
-    init_lexer(source);
-
-    for (;;) {
-        Expr* e = parse_expr();
-        if (e != NULL) {
-            print_expr(eval(e));
-        } else {
-            return;
-        }
-    }
-}
-
 static void run_file(const char* file_path) {
     char* source = read_file(file_path);
 
@@ -55,13 +57,37 @@ static void run_file(const char* file_path) {
 
     free(source);
 }
+#else
+static void run_test(void) {
+    char buffer[1024] = { '\0' };
+    int used = 0;
+    int left = sizeof(buffer);
+
+    while (!feof(stdin)) {
+        fgets(buffer + used, left, stdin);
+
+        int length = strlen(buffer + used);
+        used += length;
+        left -= length;
+
+        // fgets reads up to (left - 1) characters, so this will never be 0.
+        if (left == 1) { break; }
+    }
+
+    interpret(buffer);
+}
+#endif
 
 int main(int argc, const char** argv) {
+#ifndef PONYO_TEST
     if (argc != 2) {
         ERROR(EX_USAGE, "usage: %s [path/to/file]", argv[0]);
     }
 
     run_file(argv[1]);
+#else
+    run_test();
+#endif
 
     return EX_OK;
 }

@@ -11,8 +11,9 @@ PROG=ponyo
 $(PROG): $(OBJS)
 	$(CC) -o $@ $^ $(CFLAGS)
 
-test: $(PROG)
-	@./runtests.sh
+test: CFLAGS += -DPONYO_TEST
+test: clean $(PROG)
+	@./runtests.sh && make clean
 
 clean:
 	rm -f $(OBJS) $(PROG)

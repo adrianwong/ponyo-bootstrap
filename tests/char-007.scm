@@ -1,4 +1,0 @@
-#\Space
-#\tAb
-#\reTURn
-#\nEwLiNe

@@ -1,1 +1,0 @@
-#\s#\space#\n#\newline
