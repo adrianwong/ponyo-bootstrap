@@ -10,7 +10,7 @@
 static Expr* TRUE = &(Expr){ .b.type = EXPR_BOOL, .b.value = true };
 static Expr* FALSE = &(Expr){ .b.type = EXPR_BOOL, .b.value = false };
 
-static Expr* malloc_expr() {
+static Expr* malloc_expr(void) {
     // No GC... yet.
     Expr* e = (Expr*)malloc(sizeof(Expr));
     if (e == NULL) { ERROR(EX_IOERR, "error: out of memory"); }
