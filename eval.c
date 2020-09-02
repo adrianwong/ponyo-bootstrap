@@ -25,7 +25,7 @@ Expr* eval(Expr* expr) {
 static void print_bool(Expr* e) {
     assert(e->type == EXPR_BOOL);
 
-    if (e->b.value) { puts("#t"); } else { puts("#f"); }
+    if (e->b.value) { printf("#t"); } else { printf("#f"); }
 }
 
 static void print_char(Expr* e) {
@@ -49,7 +49,6 @@ static void print_char(Expr* e) {
         printf("%c", e->c.value);
         break;
     }
-    printf("\n");
 }
 
 static void print_string(Expr* e) {
@@ -74,13 +73,13 @@ static void print_string(Expr* e) {
         }
         c++;
     }
-    printf("\"\n");
+    printf("\"");
 }
 
 static void print_int(Expr* e) {
     assert(e->type == EXPR_INT);
 
-    printf("%d\n", e->i.value);
+    printf("%d", e->i.value);
 }
 
 void print_expr(Expr* expr) {
@@ -104,7 +103,8 @@ void print_expr(Expr* expr) {
         print_expr(expr->q.value);
         break;
     case EXPR_EMPTY_LIST:
-        printf("()\n");
+        printf("()");
         break;
     }
+    printf("\n");
 }
