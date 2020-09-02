@@ -11,6 +11,7 @@ Expr* eval(Expr* expr) {
     case EXPR_CHAR:
     case EXPR_STRING:
     case EXPR_INT:
+    case EXPR_EMPTY_LIST:
         return expr;
     case EXPR_QUOTE:
         return expr->q.value;
@@ -101,6 +102,9 @@ void print_expr(Expr* expr) {
     case EXPR_QUOTE:
         printf("'");
         print_expr(expr->q.value);
+        break;
+    case EXPR_EMPTY_LIST:
+        printf("()\n");
         break;
     }
 }

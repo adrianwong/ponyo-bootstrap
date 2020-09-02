@@ -151,6 +151,10 @@ Token token(void) {
         if (is_digit(peek())) { return integer(); }
     case '\'':
         return make_token(TOK_QUOTE);
+    case '(':
+        return make_token(TOK_LPAREN);
+    case ')':
+        return make_token(TOK_RPAREN);
     default:
         DATA_ERROR(lexer.line, "unexpected character '%c'", c);
     }

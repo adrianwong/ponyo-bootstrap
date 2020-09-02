@@ -8,6 +8,8 @@ typedef enum {
     TOK_STRING,
     TOK_INT,
     TOK_QUOTE,
+    TOK_LPAREN,
+    TOK_RPAREN,
     TOK_EOF
 } TokenType;
 

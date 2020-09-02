@@ -99,6 +99,12 @@ test quote-dangling "'" 'error: [line 1] dangling quote'
 test quote-dangling-whitespace "'    " 'error: [line 1] dangling quote'
 
 println
+test empty-list-literal "'()" '()'
+test empty-list '()' '()' # This should error once we implement 'apply'.
+test list-dangling-left '(' "error: [line 1] dangling '('"
+test list-dangling-right ')' "error: [line 1] dangling ')'"
+
+println
 if [ "$errors" -gt 0 ]; then
     println_redbold "test result: $errors failed"
     exit 1

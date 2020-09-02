@@ -9,6 +9,7 @@
 // Constants.
 static Expr* TRUE = &(Expr){ .b.type = EXPR_BOOL, .b.value = true };
 static Expr* FALSE = &(Expr){ .b.type = EXPR_BOOL, .b.value = false };
+static Expr* EMPTY_LIST = &(Expr){ .type = EXPR_EMPTY_LIST };
 
 static Expr* malloc_expr(void) {
     // No GC... yet.
@@ -103,6 +104,20 @@ static Expr* make_quote(void) {
     return e;
 }
 
+static Expr* make_list(void) {
+    Token t = token();
+    switch (t.type) {
+    case TOK_RPAREN:
+        return EMPTY_LIST;
+    case TOK_EOF:
+        DATA_ERROR(t.line, "dangling '('");
+    default:
+        DATA_ERROR(t.line, "unsupported");
+    }
+
+    return NULL;
+}
+
 Expr* parse_expr(Token t) {
     switch (t.type) {
     case TOK_TRUE:
@@ -117,6 +132,10 @@ Expr* parse_expr(Token t) {
         return make_int(t);
     case TOK_QUOTE:
         return make_quote();
+    case TOK_LPAREN:
+        return make_list();
+    case TOK_RPAREN:
+        DATA_ERROR(t.line, "dangling ')'");
     case TOK_EOF:
         return NULL;
     }
