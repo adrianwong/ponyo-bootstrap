@@ -14,6 +14,7 @@ static void interpret(const char* source) {
         Expr* e = parse_expr(token());
         if (e != NULL) {
             print_expr(eval(e));
+            printf("\n");
         } else {
             return;
         }

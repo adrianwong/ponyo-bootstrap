@@ -106,16 +106,19 @@ static Expr* make_quote(void) {
 
 static Expr* make_list(void) {
     Token t = token();
-    switch (t.type) {
-    case TOK_RPAREN:
-        return NIL;
-    case TOK_EOF:
-        DATA_ERROR(t.line, "dangling '('");
-    default:
-        DATA_ERROR(t.line, "unsupported");
-    }
 
-    return NULL;
+    if (t.type == TOK_RPAREN) {
+        return NIL;
+    } else if (t.type == TOK_EOF) {
+        DATA_ERROR(t.line, "dangling '('");
+    } else {
+        Expr* e = malloc_expr();
+        e->ce.type = EXPR_CELL;
+        e->ce.car = parse_expr(t);
+        e->ce.cdr = make_list();
+
+        return e;
+    }
 }
 
 Expr* parse_expr(Token t) {

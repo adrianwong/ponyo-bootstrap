@@ -13,6 +13,7 @@ typedef enum {
     EXPR_STRING,
     EXPR_INT,
     EXPR_QUOTE,
+    EXPR_CELL,
     EXPR_NIL
 } ExprType;
 
@@ -41,6 +42,12 @@ typedef struct {
     Expr* value;
 } Quote;
 
+typedef struct {
+    ExprType type;
+    Expr* car;
+    Expr* cdr;
+} Cell;
+
 union Expr {
     ExprType type;
     Bool bl;
@@ -48,6 +55,7 @@ union Expr {
     String st;
     Int in;
     Quote qt;
+    Cell ce;
 };
 
 Expr* parse_expr(Token t);

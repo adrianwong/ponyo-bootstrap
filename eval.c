@@ -12,6 +12,7 @@ Expr* eval(Expr* expr) {
     case EXPR_STRING:
     case EXPR_INT:
     case EXPR_NIL:
+    case EXPR_CELL:
         return expr;
     case EXPR_QUOTE:
         return expr->qt.value;
@@ -82,6 +83,23 @@ static void print_int(Expr* e) {
     printf("%d", e->in.value);
 }
 
+static void print_list(Expr* e) {
+    assert(e->type == EXPR_CELL);
+
+    printf("(");
+    print_expr(e->ce.car);
+
+    Expr* cdr = e->ce.cdr;
+    while (cdr->type != EXPR_NIL) {
+        assert(cdr->type == EXPR_CELL);
+
+        printf(" ");
+        print_expr(cdr->ce.car);
+        cdr = cdr->ce.cdr;
+    }
+    printf(")");
+}
+
 void print_expr(Expr* expr) {
     assert(expr != NULL);
 
@@ -105,6 +123,8 @@ void print_expr(Expr* expr) {
     case EXPR_NIL:
         printf("()");
         break;
+    case EXPR_CELL:
+        print_list(expr);
+        break;
     }
-    printf("\n");
 }

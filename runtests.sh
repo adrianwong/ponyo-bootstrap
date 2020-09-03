@@ -101,6 +101,8 @@ test quote-dangling-whitespace "'    " 'error: [line 1] dangling quote'
 println
 test empty-list-literal "'()" '()'
 test empty-list '()' '()' # This should error once we implement 'apply'.
+test list '(1 #\a #t)' '(1 #\a #t)'
+test list-nested '((123 "string") #\a #t ())' '((123 "string") #\a #t ())'
 test list-dangling-left '(' "error: [line 1] dangling '('"
 test list-dangling-right ')' "error: [line 1] dangling ')'"
 
