@@ -43,11 +43,11 @@ typedef struct {
 
 union Expr {
     ExprType type;
-    Bool b;
-    Char c;
-    String s;
-    Int i;
-    Quote q;
+    Bool bl;
+    Char ch;
+    String st;
+    Int in;
+    Quote qt;
 };
 
 Expr* parse_expr(Token t);

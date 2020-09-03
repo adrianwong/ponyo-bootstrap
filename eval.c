@@ -14,7 +14,7 @@ Expr* eval(Expr* expr) {
     case EXPR_NIL:
         return expr;
     case EXPR_QUOTE:
-        return expr->q.value;
+        return expr->qt.value;
     }
 
     return NULL;
@@ -25,14 +25,14 @@ Expr* eval(Expr* expr) {
 static void print_bool(Expr* e) {
     assert(e->type == EXPR_BOOL);
 
-    if (e->b.value) { printf("#t"); } else { printf("#f"); }
+    if (e->bl.value) { printf("#t"); } else { printf("#f"); }
 }
 
 static void print_char(Expr* e) {
     assert(e->type == EXPR_CHAR);
 
     printf("#\\");
-    switch (e->c.value) {
+    switch (e->ch.value) {
     case ' ':
         printf("space");
         break;
@@ -46,7 +46,7 @@ static void print_char(Expr* e) {
         printf("newline");
         break;
     default:
-        printf("%c", e->c.value);
+        printf("%c", e->ch.value);
         break;
     }
 }
@@ -54,7 +54,7 @@ static void print_char(Expr* e) {
 static void print_string(Expr* e) {
     assert(e->type == EXPR_STRING);
 
-    char* c = e->s.value;
+    char* c = e->st.value;
     printf("\"");
     while (*c != '\0') {
         switch (*c) {
@@ -79,7 +79,7 @@ static void print_string(Expr* e) {
 static void print_int(Expr* e) {
     assert(e->type == EXPR_INT);
 
-    printf("%d", e->i.value);
+    printf("%d", e->in.value);
 }
 
 void print_expr(Expr* expr) {
@@ -100,7 +100,7 @@ void print_expr(Expr* expr) {
         break;
     case EXPR_QUOTE:
         printf("'");
-        print_expr(expr->q.value);
+        print_expr(expr->qt.value);
         break;
     case EXPR_NIL:
         printf("()");

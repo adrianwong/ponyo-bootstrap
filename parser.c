@@ -7,8 +7,8 @@
 #include "parser.h"
 
 // Constants.
-static Expr* TRUE = &(Expr){ .b.type = EXPR_BOOL, .b.value = true };
-static Expr* FALSE = &(Expr){ .b.type = EXPR_BOOL, .b.value = false };
+static Expr* TRUE = &(Expr){ .bl.type = EXPR_BOOL, .bl.value = true };
+static Expr* FALSE = &(Expr){ .bl.type = EXPR_BOOL, .bl.value = false };
 static Expr* NIL = &(Expr){ .type = EXPR_NIL };
 
 static Expr* malloc_expr(void) {
@@ -47,8 +47,8 @@ static Expr* make_char(Token t) {
     }
 
     Expr* e = malloc_expr();
-    e->c.type = EXPR_CHAR;
-    e->c.value = c;
+    e->ch.type = EXPR_CHAR;
+    e->ch.value = c;
 
     return e;
 }
@@ -58,13 +58,13 @@ static Expr* make_string(Token t) {
     assert(t.start[0] == '"' && t.start[t.length - 1] == '"');
 
     Expr* e = malloc_expr();
-    e->s.type = EXPR_STRING;
+    e->st.type = EXPR_STRING;
 
     int length = t.length - 1; // -2 to omit quotes, +1 for null terminator.
-    e->s.value = (char*)malloc(length);
-    if (e->s.value == NULL) { ERROR(EX_IOERR, "error: out of memory"); }
-    memcpy(e->s.value, t.start + 1, length);
-    e->s.value[length - 1] = '\0';
+    e->st.value = (char*)malloc(length);
+    if (e->st.value == NULL) { ERROR(EX_IOERR, "error: out of memory"); }
+    memcpy(e->st.value, t.start + 1, length);
+    e->st.value[length - 1] = '\0';
 
     return e;
 }
@@ -87,8 +87,8 @@ static Expr* make_int(Token t) {
     }
 
     Expr* e = malloc_expr();
-    e->i.type = EXPR_INT;
-    e->i.value = sign * value;
+    e->in.type = EXPR_INT;
+    e->in.value = sign * value;
 
     return e;
 }
@@ -98,8 +98,8 @@ static Expr* make_quote(void) {
     if (t.type == TOK_EOF) { DATA_ERROR(t.line, "dangling quote"); }
 
     Expr* e = malloc_expr();
-    e->q.type = EXPR_QUOTE;
-    e->q.value = parse_expr(t);
+    e->qt.type = EXPR_QUOTE;
+    e->qt.value = parse_expr(t);
 
     return e;
 }
