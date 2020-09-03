@@ -9,7 +9,7 @@
 // Constants.
 static Expr* TRUE = &(Expr){ .b.type = EXPR_BOOL, .b.value = true };
 static Expr* FALSE = &(Expr){ .b.type = EXPR_BOOL, .b.value = false };
-static Expr* EMPTY_LIST = &(Expr){ .type = EXPR_EMPTY_LIST };
+static Expr* NIL = &(Expr){ .type = EXPR_NIL };
 
 static Expr* malloc_expr(void) {
     // No GC... yet.
@@ -108,7 +108,7 @@ static Expr* make_list(void) {
     Token t = token();
     switch (t.type) {
     case TOK_RPAREN:
-        return EMPTY_LIST;
+        return NIL;
     case TOK_EOF:
         DATA_ERROR(t.line, "dangling '('");
     default:

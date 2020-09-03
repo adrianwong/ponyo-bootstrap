@@ -13,7 +13,7 @@ typedef enum {
     EXPR_STRING,
     EXPR_INT,
     EXPR_QUOTE,
-    EXPR_EMPTY_LIST
+    EXPR_NIL
 } ExprType;
 
 typedef struct {
