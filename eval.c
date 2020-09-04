@@ -90,12 +90,14 @@ static void print_list(Expr* e) {
     print_expr(e->ce.car);
 
     Expr* cdr = e->ce.cdr;
-    while (cdr->type != EXPR_NIL) {
-        assert(cdr->type == EXPR_CELL);
-
+    while (cdr->type == EXPR_CELL) {
         printf(" ");
         print_expr(cdr->ce.car);
         cdr = cdr->ce.cdr;
+    }
+    if (cdr->type != EXPR_NIL) {
+        printf(" . ");
+        print_expr(cdr);
     }
     printf(")");
 }

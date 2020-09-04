@@ -10,6 +10,7 @@ typedef enum {
     TOK_QUOTE,
     TOK_LPAREN,
     TOK_RPAREN,
+    TOK_DOT,
     TOK_EOF
 } TokenType;
 

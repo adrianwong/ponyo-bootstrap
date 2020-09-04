@@ -106,6 +106,11 @@ test list-nested '((123 "string") #\a #t ())' '((123 "string") #\a #t ())'
 test list-dangling-left '(' "error: [line 1] dangling '('"
 test list-dangling-right ')' "error: [line 1] dangling ')'"
 
+test improper-list '(1 . 2)' '(1 . 2)'
+test improper-list-nested '(1 . (2 . 3))' '(1 2 . 3)'
+test dot-proper-list '(1 . (2 . (3 . ())))' '(1 2 3)'
+test improper-list-rparen '(1 . 2 . 3)' "error: [line 1] expected ')'"
+
 println
 if [ "$errors" -gt 0 ]; then
     println_redbold "test result: $errors failed"

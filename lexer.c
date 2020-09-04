@@ -155,6 +155,8 @@ Token token(void) {
         return make_token(TOK_LPAREN);
     case ')':
         return make_token(TOK_RPAREN);
+    case '.':
+        return make_token(TOK_DOT);
     default:
         DATA_ERROR(lexer.line, "unexpected character '%c'", c);
     }

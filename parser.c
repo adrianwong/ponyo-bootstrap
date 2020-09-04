@@ -104,21 +104,26 @@ static Expr* make_quote(void) {
     return e;
 }
 
-static Expr* make_list(void) {
-    Token t = token();
+static Expr* make_list(Token t) {
+    if (t.type == TOK_RPAREN) { return NIL; }
+    if (t.type == TOK_EOF) { DATA_ERROR(t.line, "dangling '('"); }
 
-    if (t.type == TOK_RPAREN) {
-        return NIL;
-    } else if (t.type == TOK_EOF) {
-        DATA_ERROR(t.line, "dangling '('");
+    Expr* e = malloc_expr();
+    e->ce.type = EXPR_CELL;
+    e->ce.car = parse_expr(t);
+
+    t = token();
+    if (t.type == TOK_DOT) {
+        e->ce.cdr = parse_expr(token());
+
+        if (token().type != TOK_RPAREN) {
+            DATA_ERROR(t.line, "expected ')'");
+        }
     } else {
-        Expr* e = malloc_expr();
-        e->ce.type = EXPR_CELL;
-        e->ce.car = parse_expr(t);
-        e->ce.cdr = make_list();
-
-        return e;
+        e->ce.cdr = make_list(t);
     }
+
+    return e;
 }
 
 Expr* parse_expr(Token t) {
@@ -136,9 +141,11 @@ Expr* parse_expr(Token t) {
     case TOK_QUOTE:
         return make_quote();
     case TOK_LPAREN:
-        return make_list();
+        return make_list(token());
     case TOK_RPAREN:
         DATA_ERROR(t.line, "dangling ')'");
+    case TOK_DOT:
+        DATA_ERROR(t.line, "dangling '.'");
     case TOK_EOF:
         return NULL;
     }
