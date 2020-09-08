@@ -52,6 +52,14 @@ static Val* EMPTY_LIST = &(Val){ TY_EMPTY_LIST };
 // A "table" for interned symbols.
 static Val* symbol_list;
 
+// From SICP: "...we represent an environment as a list of frames. The enclosing
+// environment of an environment is the `cdr` of the list. The empty environment
+// is simply the empty list.
+//
+// Each frame of an environment is represented as a pair of lists: a list of the
+// variables bound in that frame and a list of the associated values."
+static Val* global_env;
+
 /*------------------------------------------------------------------------------
  | CONSTRUCTORS
  -----------------------------------------------------------------------------*/
@@ -372,6 +380,7 @@ static void print(Val* val) {
 
 int main(void) {
     symbol_list = EMPTY_LIST;
+    global_env = cons(cons(EMPTY_LIST, EMPTY_LIST), EMPTY_LIST);
     for (;;) {
         Val* val = read();
         if (val != NULL) {
