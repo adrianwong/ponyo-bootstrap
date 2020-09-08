@@ -193,7 +193,7 @@ static Val* read_quote(void) {
     if (val == NULL) {
         ERROR("unexpected EOF reading quote");
     }
-    Val* sym = make_string_or_symbol(TY_SYMBOL, "quote");
+    Val* sym = intern_symbol("quote");
     return cons(sym, cons(val, EMPTY_LIST));
 }
 
