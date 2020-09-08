@@ -88,29 +88,30 @@ test string-empty '""' '""'
 test_fail string-unterminated '"unterminated'
 
 println
-test empty-list-1 '()' '()'
-test empty-list-2 '(     )' '()'
-test list-1 '(1 "string" #t)' '(1 "string" #t)'
-test list-2 '(  1    "string"    #t  )' '(1 "string" #t)'
-test list-nested '((123 "string") #f #t ())' '((123 "string") #f #t ())'
+test empty-list-1 "'()" '()'
+test empty-list-2 "'(     )" '()'
+test list-1 "'(1 \"string\" #t)" '(1 "string" #t)'
+test list-2 "'(  1    \"string\"    #t  )" '(1 "string" #t)'
+test list-nested "'((123 \"string\") #f #t ())" '((123 "string") #f #t ())'
+test_fail empty_list_unquoted '()'
 test_fail list-unclosed-list '('
 test_fail list-unexpected-terminator ')'
 
 println
-test improper-list-1 '(1 . 2)' '(1 . 2)'
-test improper-list-2 '(    1  .  2    )' '(1 . 2)'
-test improper-list-nested '(1 . (2 . 3))' '(1 2 . 3)'
-test improper-proper-list '(1 . (2 . (3 . ())))' '(1 2 3)'
+test improper-list-1 "'(1 . 2)" '(1 . 2)'
+test improper-list-2 "'(    1  .  2    )" '(1 . 2)'
+test improper-list-nested "'(1 . (2 . 3))" '(1 2 . 3)'
+test improper-proper-list "'(1 . (2 . (3 . ())))" '(1 2 3)'
 test_fail improper-list-rparen '(1 . 2 . 3)'
 
 println
-test quote-bool "'#t" '(quote #t)'
-test quote-int "'12345" '(quote 12345)'
-test quote-string "'\"string\"" '(quote "string")'
-test quote-empty-list "'()" '(quote ())'
-test quote-list "'(#t 12345 \"string\")" '(quote (#t 12345 "string"))'
-test quote-list-quote "'(#t 555 '(#f ()))" '(quote (#t 555 (quote (#f ()))))'
+test quote-bool "'#t" '#t'
+test quote-int "'12345" '12345'
+test quote-string "'\"string\"" '"string"'
+test quote-list "'(#t 12345 \"string\")" '(#t 12345 "string")'
+test quote-list-quote "'(#t 555 '(#f ()))" '(#t 555 (quote (#f ())))'
 test_fail quote-quote "''"
+test_fail quote-no-args '(quote)'
 
 println
 if [ "$errors" -gt 0 ]; then

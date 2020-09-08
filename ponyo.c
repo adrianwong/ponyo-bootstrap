@@ -24,11 +24,14 @@ typedef enum Type {
     TY_EMPTY_LIST,
     TY_INT,
     TY_PAIR,
+    TY_PRIM_PROC,
     TY_STRING,
     TY_SYMBOL,
 } Type;
 
-typedef struct Val {
+typedef struct Val Val;
+typedef Val* PrimProc(Val* args);
+struct Val {
     Type ty;
 
     union {
@@ -39,10 +42,12 @@ typedef struct Val {
             struct Val* car;
             struct Val* cdr;
         };
+        // Primitive procedure.
+        PrimProc* proc;
         // String or symbol.
         char* str;
     };
-} Val;
+};
 
 // Constants.
 static Val* FALSE = &(Val){ TY_FALSE };
@@ -84,6 +89,12 @@ static Val* cons(Val* car, Val* cdr) {
 static Val* make_int(int num) {
     Val* val = malloc_val(TY_INT);
     val->num = num;
+    return val;
+}
+
+static Val* make_prim_proc(PrimProc* proc) {
+    Val* val = malloc_val(TY_PRIM_PROC);
+    val->proc = proc;
     return val;
 }
 
@@ -280,21 +291,111 @@ static Val* read(void) {
 }
 
 /*------------------------------------------------------------------------------
+ | ENVIRONMENT
+ -----------------------------------------------------------------------------*/
+
+static Val* lookup_variable(Val* var, Val* env) {
+    while (env != EMPTY_LIST) {
+        Val* frame = env->car;
+        Val* vars = frame->car;
+        Val* vals = frame->cdr;
+        while (vars != EMPTY_LIST) {
+            if (var == vars->car) {
+                return vals->car;
+            }
+            vars = vars->cdr;
+            vals = vals->cdr;
+        }
+        // Not found, search next frame.
+        env = env->cdr;
+    }
+    ERROR("unbound variable: %s", var->str);
+}
+
+static void add_binding(Val* var, Val* val, Val* frame) {
+    frame->car = cons(var, frame->car);
+    frame->cdr = cons(val, frame->cdr);
+}
+
+static void define_variable(Val* var, Val* val, Val* env) {
+    Val* first_frame = env->car;
+    Val* vars = first_frame->car;
+    Val* vals = first_frame->cdr;
+    while (vars != EMPTY_LIST) {
+        // Change the binding if it exists.
+        if (var == vars->car) {
+            vals->car = val;
+            return;
+        }
+        vars = vars->cdr;
+        vals = vals->cdr;
+    }
+    // Else adjoin one to the first frame.
+    add_binding(var, val, first_frame);
+}
+
+/*------------------------------------------------------------------------------
  | EVALUATOR
  -----------------------------------------------------------------------------*/
 
-static Val* eval(Val* val) {
+static Val* apply(Val* val, Val* args) {
+    if (val->ty == TY_PRIM_PROC) {
+        return val->proc(args);
+    } else {
+        ERROR("unknown procedure type");
+    }
+}
+
+static Val* eval(Val* val, Val* env) {
     switch (val->ty) {
     case TY_FALSE:
     case TY_TRUE:
-    case TY_EMPTY_LIST:
     case TY_INT:
     case TY_STRING:
-    case TY_PAIR:
-    case TY_SYMBOL:
+    case TY_PRIM_PROC:
         return val;
+    case TY_EMPTY_LIST:
+        ERROR("invalid syntax: ()");
+    case TY_SYMBOL:
+        return lookup_variable(val, env);
+    case TY_PAIR: {
+        Val* proc = eval(val->car, env);
+        Val* args = val->cdr;
+        return apply(proc, args);
     }
-    return NULL;
+    default:
+        return NULL;
+    }
+}
+
+/*------------------------------------------------------------------------------
+ | PRIMITIVE PROCEDURES
+ -----------------------------------------------------------------------------*/
+
+static int length(Val* val) {
+    int len = 0;
+    while (val->ty == TY_PAIR) {
+        len++;
+        val = val->cdr;
+    }
+    return val == EMPTY_LIST ? len : -1; // -1 if list is improper.
+}
+
+static Val* prim_quote(Val* args) {
+    if (length(args) != 1) {
+        ERROR("invalid syntax: quote");
+    }
+    return args->car;
+}
+
+static void add_prim_proc(char* name, PrimProc* p, Val* env) {
+    Val* sym = intern_symbol(name);
+    Val* proc = make_prim_proc(p);
+    define_variable(sym, proc, env);
+}
+
+static void define_prim_procs(Val* env) {
+    add_prim_proc("quote", prim_quote, env);
 }
 
 /*------------------------------------------------------------------------------
@@ -368,6 +469,9 @@ static void print(Val* val) {
     case TY_PAIR:
         print_list(val);
         break;
+    case TY_PRIM_PROC:
+        printf("#<primitive-procedure>");
+        break;
     case TY_SYMBOL:
         printf("%s", val->str);
         break;
@@ -381,10 +485,11 @@ static void print(Val* val) {
 int main(void) {
     symbol_list = EMPTY_LIST;
     global_env = cons(cons(EMPTY_LIST, EMPTY_LIST), EMPTY_LIST);
+    define_prim_procs(global_env);
     for (;;) {
         Val* val = read();
         if (val != NULL) {
-            print(eval(val));
+            print(eval(val, global_env));
             printf("\n");
         } else {
             return 0;
