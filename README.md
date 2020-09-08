@@ -8,7 +8,7 @@ compiler.
 
 ```
 $ make
-$ ./ponyo-bootstrap path/to/file.scm
+$ ./ponyo < path/to/file.scm
 ```
 
 ## Run tests
@@ -22,7 +22,9 @@ $ make test
 * [Crafting Interpreters][1]
 * [minilisp][2]
 * [Scheme from Scratch][3]
+* [SICP][4]
 
 [1]: https://craftinginterpreters.com
 [2]: https://github.com/rui314/minilisp
 [3]: http://michaux.ca/articles/scheme-from-scratch-introduction
+[4]: https://mitpress.mit.edu/sites/default/files/sicp/index.html
