@@ -114,6 +114,13 @@ test_fail quote-quote "''"
 test_fail quote-no-args '(quote)'
 
 println
+test define '(define a 1) a' '1'
+test define-change '(define a 1) (define a 2) a' '2'
+test define-define '(define a 1) (define b a) b' '1'
+test_fail define-no-args '(define)'
+test_fail define-not-symbol '(define 1 1)'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1

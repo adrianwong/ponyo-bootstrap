@@ -30,7 +30,7 @@ typedef enum Type {
 } Type;
 
 typedef struct Val Val;
-typedef Val* PrimProc(Val* args);
+typedef Val* PrimProc(Val* args, Val* env);
 struct Val {
     Type ty;
 
@@ -338,9 +338,9 @@ static void define_variable(Val* var, Val* val, Val* env) {
  | EVALUATOR
  -----------------------------------------------------------------------------*/
 
-static Val* apply(Val* val, Val* args) {
+static Val* apply(Val* val, Val* args, Val* env) {
     if (val->ty == TY_PRIM_PROC) {
-        return val->proc(args);
+        return val->proc(args, env);
     } else {
         ERROR("unknown procedure type");
     }
@@ -361,7 +361,7 @@ static Val* eval(Val* val, Val* env) {
     case TY_PAIR: {
         Val* proc = eval(val->car, env);
         Val* args = val->cdr;
-        return apply(proc, args);
+        return apply(proc, args, env);
     }
     default:
         return NULL;
@@ -381,11 +381,21 @@ static int length(Val* val) {
     return val == EMPTY_LIST ? len : -1; // -1 if list is improper.
 }
 
-static Val* prim_quote(Val* args) {
+static Val* prim_quote(Val* args, Val* env) {
     if (length(args) != 1) {
         ERROR("invalid syntax: quote");
     }
     return args->car;
+}
+
+static Val* prim_define(Val* args, Val* env) {
+    if (length(args) != 2 || args->car->ty != TY_SYMBOL) {
+        ERROR("invalid syntax: define");
+    }
+    Val* var = args->car;
+    Val* val = eval(args->cdr->car, env);
+    define_variable(var, val, env);
+    return NULL;
 }
 
 static void add_prim_proc(char* name, PrimProc* p, Val* env) {
@@ -395,6 +405,7 @@ static void add_prim_proc(char* name, PrimProc* p, Val* env) {
 }
 
 static void define_prim_procs(Val* env) {
+    add_prim_proc("define", prim_define, env);
     add_prim_proc("quote", prim_quote, env);
 }
 
@@ -489,8 +500,11 @@ int main(void) {
     for (;;) {
         Val* val = read();
         if (val != NULL) {
-            print(eval(val, global_env));
-            printf("\n");
+            val = eval(val, global_env);
+            if (val != NULL) {
+                print(val);
+                printf("\n");
+            }
         } else {
             return 0;
         }
