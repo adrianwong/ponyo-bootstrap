@@ -554,6 +554,37 @@ static Val* prim_eq(Val* args, Val* env) {
     }
 }
 
+static Val* prim_car(Val* args, Val* env) {
+    if (length(args) != 1) {
+        ERROR("invalid syntax: car");
+    }
+    Val* val = eval(args->car, env);
+    if (val->ty != TY_PAIR) {
+        ERROR("argument is not a pair");
+    }
+    return val->car;
+}
+
+static Val* prim_cdr(Val* args, Val* env) {
+    if (length(args) != 1) {
+        ERROR("invalid syntax: cdr");
+    }
+    Val* val = eval(args->car, env);
+    if (val->ty != TY_PAIR) {
+        ERROR("argument is not a pair");
+    }
+    return val->cdr;
+}
+
+static Val* prim_cons(Val* args, Val* env) {
+    if (length(args) != 2) {
+        ERROR("invalid syntax: cons");
+    }
+    Val* head = eval(args->car, env);
+    Val* tail = eval(args->cdr->car, env);
+    return cons(head, tail);
+}
+
 static void add_prim_proc(char* name, PrimProc* p, Val* env) {
     Val* sym = intern_symbol(name);
     Val* proc = make_prim_proc(p);
@@ -569,6 +600,9 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(">", prim_gt, env);
     add_prim_proc("=", prim_num_eq, env);
     add_prim_proc("abs", prim_abs, env);
+    add_prim_proc("car", prim_car, env);
+    add_prim_proc("cdr", prim_cdr, env);
+    add_prim_proc("cons", prim_cons, env);
     add_prim_proc("define", prim_define, env);
     add_prim_proc("eq?", prim_eq, env);
     add_prim_proc("quote", prim_quote, env);

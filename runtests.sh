@@ -201,6 +201,33 @@ test_fail eq-fail-1 '(eq?)'
 test_fail eq-fail-2 '(eq? 1)'
 
 println
+test car-1 "(car '(1))" '1'
+test car-2 "(car '(1 2))" '1'
+test car-3 "(car '((1 2 4) 8))" '(1 2 4)'
+test car-4 "(define a '(8 4 2)) (car a)" '8'
+test_fail car-fail-1 "(car '())"
+test_fail car-fail-2 '(car)'
+test_fail car-fail-3 '(car a)'
+
+println
+test cdr-1 "(cdr '(1))" '()'
+test cdr-2 "(cdr '(1 2))" '(2)'
+test cdr-3 "(cdr '((1 2) (4 8)))" '((4 8))'
+test cdr-4 "(define a '(8 4 2)) (cdr a)" '(4 2)'
+test_fail cdr-fail-1 "(cdr '())"
+test_fail cdr-fail-2 '(cdr)'
+test_fail cdr-fail-3 '(cdr a)'
+
+println
+test cons-1 '(cons 1 2)' '(1 . 2)'
+test cons-2 "(cons 1 '(2))" '(1 2)'
+test cons-3 "(cons '(1 2) '(3 4))" '((1 2) 3 4)'
+test cons-4 "(cons '(1 2) '(3 . 4))" '((1 2) 3 . 4)'
+test cons-5 "(cons 4 (cons 8 '()))" '(4 8)'
+test_fail cons-fail-1 '(cons)'
+test_fail cons-fail-2 '(cons 1)'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1
