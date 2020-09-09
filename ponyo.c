@@ -300,6 +300,8 @@ static Val* lookup_variable(Val* var, Val* env) {
         Val* vars = frame->car;
         Val* vals = frame->cdr;
         while (vars != EMPTY_LIST) {
+            // Note: `strcmp` is unnecessary. Symbols are interned, so
+            // pointer comparison is sufficient.
             if (var == vars->car) {
                 return vals->car;
             }
@@ -372,7 +374,22 @@ static Val* eval(Val* val, Val* env) {
  | PRIMITIVE PROCEDURES
  -----------------------------------------------------------------------------*/
 
-static int length(Val* val) {
+#define PRIM_ADD    "+"
+#define PRIM_SUB    "-"
+#define PRIM_MUL    "*"
+#define PRIM_DIV    "/"
+#define PRIM_ABS    "abs"
+#define PRIM_LT     "<"
+#define PRIM_GT     ">"
+#define PRIM_NUM_EQ "="
+#define PRIM_EQ     "eq?"
+#define PRIM_CAR    "car"
+#define PRIM_CDR    "cdr"
+#define PRIM_CONS   "cons"
+#define PRIM_DEFINE "define"
+#define PRIM_QUOTE  "quote"
+
+static int len(Val* val) {
     int len = 0;
     while (val->ty == TY_PAIR) {
         len++;
@@ -381,52 +398,64 @@ static int length(Val* val) {
     return val == EMPTY_LIST ? len : -1; // -1 if list is improper.
 }
 
-static Val* prim_quote(Val* args, Val* env) {
-    if (length(args) != 1) {
-        ERROR("invalid syntax: quote");
+static char gt(int a, int b) { return a  > b ? 1 : 0; }
+static char eq(int a, int b) { return a == b ? 1 : 0; }
+static void check_len(char* proc, Val* args, char (*op)(int, int), int exp) {
+    if (!op(len(args), exp)) {
+        ERROR("%s: incorrect argument count", proc);
     }
-    return args->car;
 }
 
-static Val* prim_define(Val* args, Val* env) {
-    if (length(args) != 2 || args->car->ty != TY_SYMBOL) {
-        ERROR("invalid syntax: define");
+// Yes, "typ" without the "e" so the function name has the same number of
+// characters as `check_len`. Fight me.
+static void check_typ(char* proc, Val* arg, Type exp) {
+    if (arg->ty != exp) {
+        char* type;
+        switch (exp) {
+        case TY_FALSE:
+        case TY_TRUE:
+            type = "boolean";
+            break;
+        case TY_INT:
+            type = "number";
+            break;
+        case TY_PAIR:
+            type = "pair";
+            break;
+        case TY_STRING:
+            type = "string";
+            break;
+        case TY_SYMBOL:
+            type = "symbol";
+            break;
+        default:
+            ERROR("argument is not of the expected type");
+        }
+        ERROR("%s: argument is not a %s", proc, type);
     }
-    Val* var = args->car;
-    Val* val = eval(args->cdr->car, env);
-    define_variable(var, val, env);
-    return NULL;
 }
 
 static Val* prim_add(Val* args, Val* env) {
     int sum = 0;
     for (Val* a = args; a != EMPTY_LIST; a = a->cdr) {
         Val* val = eval(a->car, env);
-        if (val->ty != TY_INT) {
-            ERROR("argument is not a number");
-        }
+        check_typ(PRIM_ADD, val, TY_INT);
         sum += val->num;
     }
     return make_int(sum);
 }
 
 static Val* prim_sub(Val* args, Val* env) {
-    if (length(args) < 1) {
-        ERROR("invalid syntax: -");
-    }
+    check_len(PRIM_SUB, args, gt, 0);
     Val* val = eval(args->car, env);
-    if (val->ty != TY_INT) {
-        ERROR("argument is not a number");
-    }
+    check_typ(PRIM_SUB, val, TY_INT);
     if (args->cdr == EMPTY_LIST) {
         return make_int(-val->num);
     }
     int sum = val->num;
     for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
         Val* val = eval(a->car, env);
-        if (val->ty != TY_INT) {
-            ERROR("argument is not a number");
-        }
+        check_typ(PRIM_SUB, val, TY_INT);
         sum -= val->num;
     }
     return make_int(sum);
@@ -436,9 +465,7 @@ static Val* prim_mul(Val* args, Val* env) {
     int sum = 1;
     for (Val* a = args; a != EMPTY_LIST; a = a->cdr) {
         Val* val = eval(a->car, env);
-        if (val->ty != TY_INT) {
-            ERROR("argument is not a number");
-        }
+        check_typ(PRIM_MUL, val, TY_INT);
         sum *= val->num;
     }
     return make_int(sum);
@@ -446,51 +473,35 @@ static Val* prim_mul(Val* args, Val* env) {
 
 // No support for rational values (yet?).
 static Val* prim_div(Val* args, Val* env) {
-    if (length(args) < 1) {
-        ERROR("invalid syntax: /");
-    }
+    check_len(PRIM_DIV, args, gt, 0);
     Val* val = eval(args->car, env);
-    if (val->ty != TY_INT) {
-        ERROR("argument is not a number");
-    }
+    check_typ(PRIM_DIV, val, TY_INT);
     if (args->cdr == EMPTY_LIST) {
         return make_int(val->num);
     }
     int sum = val->num;
     for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
         Val* val = eval(a->car, env);
-        if (val->ty != TY_INT) {
-            ERROR("argument is not a number");
-        }
+        check_typ(PRIM_DIV, val, TY_INT);
         sum /= val->num;
     }
     return make_int(sum);
 }
 
 static Val* prim_abs(Val* args, Val* env) {
-    if (length(args) != 1) {
-        ERROR("invalid syntax: abs");
-    }
+    check_len(PRIM_ABS, args, eq, 1);
     Val* val = eval(args->car, env);
-    if (val->ty != TY_INT) {
-        ERROR("argument is not a number");
-    }
+    check_typ(PRIM_ABS, val, TY_INT);
     return val->num < 0 ? make_int(-val->num) : make_int(val->num);
 }
 
 static Val* prim_lt(Val* args, Val* env) {
-    if (length(args) < 1) {
-        ERROR("invalid syntax: <");
-    }
+    check_len(PRIM_LT, args, gt, 0);
     Val* prev = eval(args->car, env);
-    if (prev->ty != TY_INT) {
-        ERROR("argument is not a number");
-    }
+    check_typ(PRIM_LT, prev, TY_INT);
     for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
         Val* curr = eval(a->car, env);
-        if (curr->ty != TY_INT) {
-            ERROR("argument is not a number");
-        }
+        check_typ(PRIM_LT, curr, TY_INT);
         if (prev->num >= curr->num) {
             return FALSE;
         }
@@ -500,18 +511,12 @@ static Val* prim_lt(Val* args, Val* env) {
 }
 
 static Val* prim_gt(Val* args, Val* env) {
-    if (length(args) < 1) {
-        ERROR("invalid syntax: >");
-    }
+    check_len(PRIM_GT, args, gt, 0);
     Val* prev = eval(args->car, env);
-    if (prev->ty != TY_INT) {
-        ERROR("argument is not a number");
-    }
+    check_typ(PRIM_GT, prev, TY_INT);
     for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
         Val* curr = eval(a->car, env);
-        if (curr->ty != TY_INT) {
-            ERROR("argument is not a number");
-        }
+        check_typ(PRIM_GT, curr, TY_INT);
         if (prev->num <= curr->num) {
             return FALSE;
         }
@@ -521,18 +526,12 @@ static Val* prim_gt(Val* args, Val* env) {
 }
 
 static Val* prim_num_eq(Val* args, Val* env) {
-    if (length(args) < 1) {
-        ERROR("invalid syntax: =");
-    }
+    check_len(PRIM_NUM_EQ, args, gt, 0);
     Val* prev = eval(args->car, env);
-    if (prev->ty != TY_INT) {
-        ERROR("argument is not a number");
-    }
+    check_typ(PRIM_NUM_EQ, prev, TY_INT);
     for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
         Val* curr = eval(a->car, env);
-        if (curr->ty != TY_INT) {
-            ERROR("argument is not a number");
-        }
+        check_typ(PRIM_NUM_EQ, curr, TY_INT);
         if (prev->num != curr->num) {
             return FALSE;
         }
@@ -542,9 +541,7 @@ static Val* prim_num_eq(Val* args, Val* env) {
 }
 
 static Val* prim_eq(Val* args, Val* env) {
-    if (length(args) != 2) {
-        ERROR("invalid syntax: eq?");
-    }
+    check_len(PRIM_EQ, args, eq, 2);
     Val* l = eval(args->car, env);
     Val* r = eval(args->cdr->car, env);
     if (l->ty == TY_INT && r->ty == TY_INT) {
@@ -555,34 +552,38 @@ static Val* prim_eq(Val* args, Val* env) {
 }
 
 static Val* prim_car(Val* args, Val* env) {
-    if (length(args) != 1) {
-        ERROR("invalid syntax: car");
-    }
+    check_len(PRIM_CAR, args, eq, 1);
     Val* val = eval(args->car, env);
-    if (val->ty != TY_PAIR) {
-        ERROR("argument is not a pair");
-    }
+    check_typ(PRIM_CAR, val, TY_PAIR);
     return val->car;
 }
 
 static Val* prim_cdr(Val* args, Val* env) {
-    if (length(args) != 1) {
-        ERROR("invalid syntax: cdr");
-    }
+    check_len(PRIM_CDR, args, eq, 1);
     Val* val = eval(args->car, env);
-    if (val->ty != TY_PAIR) {
-        ERROR("argument is not a pair");
-    }
+    check_typ(PRIM_CDR, val, TY_PAIR);
     return val->cdr;
 }
 
 static Val* prim_cons(Val* args, Val* env) {
-    if (length(args) != 2) {
-        ERROR("invalid syntax: cons");
-    }
+    check_len(PRIM_CONS, args, eq, 2);
     Val* head = eval(args->car, env);
     Val* tail = eval(args->cdr->car, env);
     return cons(head, tail);
+}
+
+static Val* prim_define(Val* args, Val* env) {
+    check_len(PRIM_DEFINE, args, eq, 2);
+    check_typ(PRIM_DEFINE, args->car, TY_SYMBOL);
+    Val* var = args->car;
+    Val* val = eval(args->cdr->car, env);
+    define_variable(var, val, env);
+    return NULL;
+}
+
+static Val* prim_quote(Val* args, Val* env) {
+    check_len(PRIM_QUOTE, args, eq, 1);
+    return args->car;
 }
 
 static void add_prim_proc(char* name, PrimProc* p, Val* env) {
@@ -592,20 +593,23 @@ static void add_prim_proc(char* name, PrimProc* p, Val* env) {
 }
 
 static void define_prim_procs(Val* env) {
-    add_prim_proc("+", prim_add, env);
-    add_prim_proc("-", prim_sub, env);
-    add_prim_proc("*", prim_mul, env);
-    add_prim_proc("/", prim_div, env);
-    add_prim_proc("<", prim_lt, env);
-    add_prim_proc(">", prim_gt, env);
-    add_prim_proc("=", prim_num_eq, env);
-    add_prim_proc("abs", prim_abs, env);
-    add_prim_proc("car", prim_car, env);
-    add_prim_proc("cdr", prim_cdr, env);
-    add_prim_proc("cons", prim_cons, env);
-    add_prim_proc("define", prim_define, env);
-    add_prim_proc("eq?", prim_eq, env);
-    add_prim_proc("quote", prim_quote, env);
+    add_prim_proc(PRIM_ADD, prim_add, env);
+    add_prim_proc(PRIM_SUB, prim_sub, env);
+    add_prim_proc(PRIM_MUL, prim_mul, env);
+    add_prim_proc(PRIM_DIV, prim_div, env);
+    add_prim_proc(PRIM_ABS, prim_abs, env);
+
+    add_prim_proc(PRIM_LT, prim_lt, env);
+    add_prim_proc(PRIM_GT, prim_gt, env);
+    add_prim_proc(PRIM_NUM_EQ, prim_num_eq, env);
+    add_prim_proc(PRIM_EQ, prim_eq, env);
+
+    add_prim_proc(PRIM_CAR, prim_car, env);
+    add_prim_proc(PRIM_CDR, prim_cdr, env);
+    add_prim_proc(PRIM_CONS, prim_cons, env);
+
+    add_prim_proc(PRIM_DEFINE, prim_define, env);
+    add_prim_proc(PRIM_QUOTE, prim_quote, env);
 }
 
 /*------------------------------------------------------------------------------
