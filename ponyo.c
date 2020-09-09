@@ -22,6 +22,7 @@ typedef enum Type {
     TY_FALSE = 0,
     TY_TRUE = 1,
     TY_EMPTY_LIST,
+    TY_COMP_PROC,
     TY_INT,
     TY_PAIR,
     TY_PRIM_PROC,
@@ -35,6 +36,12 @@ struct Val {
     Type ty;
 
     union {
+        // Compound procedure.
+        struct {
+            Val* params;
+            Val* body;
+            Val* env;
+        };
         // Int.
         int num;
         // Pair.
@@ -76,6 +83,14 @@ static Val* malloc_val(Type ty) {
         ERROR("out of memory");
     }
     val->ty = ty;
+    return val;
+}
+
+static Val* make_comp_proc(Val* params, Val* body, Val* env) {
+    Val* val = malloc_val(TY_COMP_PROC);
+    val->params = params;
+    val->body = body;
+    val->env = env;
     return val;
 }
 
@@ -294,6 +309,23 @@ static Val* read(void) {
  | ENVIRONMENT
  -----------------------------------------------------------------------------*/
 
+static int len(Val* val) {
+    int len = 0;
+    while (val->ty == TY_PAIR) {
+        len++;
+        val = val->cdr;
+    }
+    // -1 if list is improper.
+    return val == EMPTY_LIST ? len : -1;
+}
+
+static Val* extend_env(Val* vars, Val* vals, Val* env) {
+    if (len(vars) != len(vals)) {
+        ERROR("length of vars and vals do not match");
+    }
+    return cons(cons(vars, vals), env);
+}
+
 static Val* lookup_variable(Val* var, Val* env) {
     while (env != EMPTY_LIST) {
         Val* frame = env->car;
@@ -340,9 +372,32 @@ static void define_variable(Val* var, Val* val, Val* env) {
  | EVALUATOR
  -----------------------------------------------------------------------------*/
 
+static Val* eval(Val* val, Val* env);
+
 static Val* apply(Val* val, Val* args, Val* env) {
     if (val->ty == TY_PRIM_PROC) {
         return val->proc(args, env);
+    } else if (val->ty == TY_COMP_PROC) {
+        if (len(val->params) != len(args)) {
+            ERROR("incorrect number of arguments to procedure");
+        }
+        // Evaluate the args list, but store the results in reverse. This
+        // shouldn't matter, as the params list is reversed too.
+        Val* vars = EMPTY_LIST;
+        Val* vals = EMPTY_LIST;
+        for (Val* p = val->params; p != EMPTY_LIST; p = p->cdr) {
+            vars = cons(p->car, vars);
+            vals = cons(eval(args->car, env), vals);
+            args = args->cdr;
+        }
+        Val* new_env = extend_env(vars, vals, val->env);
+        // Evaluate the expressions in the procedure body, returning the value
+        // of the final expression.
+        Val* ret;
+        for (Val* b = val->body; b != EMPTY_LIST; b = b->cdr) {
+            ret = eval(b->car, new_env);
+        }
+        return ret;
     } else {
         ERROR("unknown procedure type");
     }
@@ -391,17 +446,8 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_OR     "or"
 #define PRIM_NOT    "not"
 #define PRIM_DEFINE "define"
+#define PRIM_LAMBDA "lambda"
 #define PRIM_QUOTE  "quote"
-
-static int len(Val* val) {
-    int len = 0;
-    while (val->ty == TY_PAIR) {
-        len++;
-        val = val->cdr;
-    }
-    // -1 if list is improper.
-    return val == EMPTY_LIST ? len : -1;
-}
 
 static char gt(int a, int b) { return a  > b ? 1 : 0; }
 static char eq(int a, int b) { return a == b ? 1 : 0; }
@@ -624,13 +670,40 @@ static Val* prim_not(Val* args, Val* env) {
     }
 }
 
+static Val* prim_define_proc(Val* args, Val* env) {
+    Val* params = args->car->cdr;
+    for (Val* p = params; p != EMPTY_LIST; p = p->cdr) {
+        check_typ(PRIM_DEFINE, p->car, TY_SYMBOL);
+    }
+    Val* body = args->cdr;
+    return make_comp_proc(params, body, env);
+}
+
 static Val* prim_define(Val* args, Val* env) {
-    check_len(PRIM_DEFINE, args, eq, 2);
-    check_typ(PRIM_DEFINE, args->car, TY_SYMBOL);
+    check_len(PRIM_DEFINE, args, gt, 1);
     Val* var = args->car;
-    Val* val = eval(args->cdr->car, env);
-    define_variable(var, val, env);
+    if (var->ty == TY_SYMBOL) {
+        check_len(PRIM_DEFINE, args->cdr, eq, 1);
+        Val* val = eval(args->cdr->car, env);
+        define_variable(var, val, env);
+    } else if (var->ty == TY_PAIR) {
+        var = var->car;
+        Val* val = prim_define_proc(args, env);
+        define_variable(var, val, env);
+    } else {
+        ERROR("%s: argument is not a symbol or a pair", PRIM_DEFINE);
+    }
     return NULL;
+}
+
+static Val* prim_lambda(Val* args, Val* env) {
+    check_len(PRIM_DEFINE, args, gt, 1);
+    Val* params = args->car;
+    for (Val* p = params; p != EMPTY_LIST; p = p->cdr) {
+        check_typ(PRIM_LAMBDA, p->car, TY_SYMBOL);
+    }
+    Val* body = args->cdr;
+    return make_comp_proc(params, body, env);
 }
 
 static Val* prim_quote(Val* args, Val* env) {
@@ -666,6 +739,7 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_NOT, prim_not, env);
 
     add_prim_proc(PRIM_DEFINE, prim_define, env);
+    add_prim_proc(PRIM_LAMBDA, prim_lambda, env);
     add_prim_proc(PRIM_QUOTE, prim_quote, env);
 }
 
@@ -731,6 +805,9 @@ static void print(Val* val) {
     case TY_EMPTY_LIST:
         printf("()");
         break;
+    case TY_COMP_PROC:
+        printf("#<compound-procedure>");
+        break;
     case TY_INT:
         printf("%d", val->num);
         break;
@@ -755,7 +832,8 @@ static void print(Val* val) {
 
 int main(void) {
     symbol_list = EMPTY_LIST;
-    global_env = cons(cons(EMPTY_LIST, EMPTY_LIST), EMPTY_LIST);
+    global_env = EMPTY_LIST;
+    global_env = extend_env(EMPTY_LIST, EMPTY_LIST, global_env);
     define_prim_procs(global_env);
     for (;;) {
         Val* val = read();

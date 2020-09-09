@@ -259,6 +259,23 @@ test or-3 "(or #f 2 'c '(f g))" '2'
 test or-4 '(or)' '#f'
 
 println
+test lambda-1 '((lambda () 555))' '555'
+test lambda-2 '((lambda (n) (* n n)) 10)' '100'
+test lambda-3 '(lambda () 555)' '#<compound-procedure>'
+test lambda-4 '((lambda (n) (* ((lambda (n) (+ n n)) 5) n)) 10)' '100'
+test lambda-5 '((lambda (x y) (+ ((lambda (x) (+ x y)) 5) x)) 8 10)' '23'
+
+println
+test proc-1 '(define (square n) (* n n)) (square 5)' '25'
+test proc-2 '(define (square n) (* n n))' ''
+test proc-3 '(define (square n) (* n n)) (square (square 5))' '625'
+test proc-4 '(define (f n) (if (= n 0) 1 (* n (f (- n 1))))) (f 6)' '720'
+test proc-5 '(define (g n)
+    (define (f n a) (if (= n 0) a (f (- n 1) (* n a)))) (f n 1))
+    (g 6)' '720'
+test proc-6 '(define (square) (define (f n) (* n n)) f) ((square) 15)' '225'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1
