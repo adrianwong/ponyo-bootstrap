@@ -398,6 +398,86 @@ static Val* prim_define(Val* args, Val* env) {
     return NULL;
 }
 
+static Val* prim_add(Val* args, Val* env) {
+    int sum = 0;
+    for (Val* a = args; a != EMPTY_LIST; a = a->cdr) {
+        Val* val = eval(a->car, env);
+        if (val->ty != TY_INT) {
+            ERROR("argument is not a number");
+        }
+        sum += val->num;
+    }
+    return make_int(sum);
+}
+
+static Val* prim_sub(Val* args, Val* env) {
+    if (length(args) < 1) {
+        ERROR("invalid syntax: -");
+    }
+    Val* val = eval(args->car, env);
+    if (val->ty != TY_INT) {
+        ERROR("argument is not a number");
+    }
+    if (args->cdr == EMPTY_LIST) {
+        return make_int(-val->num);
+    }
+    int sum = val->num;
+    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
+        Val* val = eval(a->car, env);
+        if (val->ty != TY_INT) {
+            ERROR("argument is not a number");
+        }
+        sum -= val->num;
+    }
+    return make_int(sum);
+}
+
+static Val* prim_mul(Val* args, Val* env) {
+    int sum = 1;
+    for (Val* a = args; a != EMPTY_LIST; a = a->cdr) {
+        Val* val = eval(a->car, env);
+        if (val->ty != TY_INT) {
+            ERROR("argument is not a number");
+        }
+        sum *= val->num;
+    }
+    return make_int(sum);
+}
+
+// No support for rational values (yet?).
+static Val* prim_div(Val* args, Val* env) {
+    if (length(args) < 1) {
+        ERROR("invalid syntax: /");
+    }
+    Val* val = eval(args->car, env);
+    if (val->ty != TY_INT) {
+        ERROR("argument is not a number");
+    }
+    if (args->cdr == EMPTY_LIST) {
+        return make_int(val->num);
+    }
+    int sum = val->num;
+    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
+        Val* val = eval(a->car, env);
+        if (val->ty != TY_INT) {
+            ERROR("argument is not a number");
+        }
+        sum /= val->num;
+    }
+    return make_int(sum);
+}
+
+static Val* prim_abs(Val* args, Val* env) {
+    if (length(args) != 1) {
+        ERROR("invalid syntax: abs");
+    }
+    Val* val = eval(args->car, env);
+    if (val->ty != TY_INT) {
+        ERROR("argument is not a number");
+    }
+    return val->num < 0 ? make_int(-val->num) : make_int(val->num);
+}
+
 static void add_prim_proc(char* name, PrimProc* p, Val* env) {
     Val* sym = intern_symbol(name);
     Val* proc = make_prim_proc(p);
@@ -405,6 +485,11 @@ static void add_prim_proc(char* name, PrimProc* p, Val* env) {
 }
 
 static void define_prim_procs(Val* env) {
+    add_prim_proc("+", prim_add, env);
+    add_prim_proc("-", prim_sub, env);
+    add_prim_proc("*", prim_mul, env);
+    add_prim_proc("/", prim_div, env);
+    add_prim_proc("abs", prim_abs, env);
     add_prim_proc("define", prim_define, env);
     add_prim_proc("quote", prim_quote, env);
 }

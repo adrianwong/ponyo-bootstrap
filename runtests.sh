@@ -121,6 +121,51 @@ test_fail define-no-args '(define)'
 test_fail define-not-symbol '(define 1 1)'
 
 println
+test add-1 '(+)' '0'
+test add-2 '(+ 1)' '1'
+test add-3 '(+ 1 2)' '3'
+test add-4 '(+ 1 2 3)' '6'
+test add-5 '(+ 1 2 (+ 3 4))' '10'
+test add-6 '(define a 1) (define b 2) (+ a b)' '3'
+test_fail add-fail-1 '(+ 1 2 #t 4)'
+test_fail add-fail-2 '(define a #f) (+ 1 2 a 4)'
+
+println
+test sub-1 '(- 1)' '-1'
+test sub-2 '(- 1 3)' '-2'
+test sub-4 '(- 10 3 2)' '5'
+test sub-5 '(- 10 3 (- 2 1))' '6'
+test sub-6 '(define a 1) (define b 5) (- a b)' '-4'
+test_fail sub-fail-1 '(-)'
+test_fail sub-fail-2 '(- 1 2 #t 4)'
+test_fail sub-fail-3 '(define a #f) (- 1 2 a 4)'
+
+println
+test mul-1 '(*)' '1'
+test mul-2 '(* 10)' '10'
+test mul-3 '(* 1 2)' '2'
+test mul-4 '(* 1 2 4)' '8'
+test mul-5 '(* 1 2 (* 3 4))' '24'
+test mul-6 '(define a 2) (define b 4) (* a b)' '8'
+test_fail mul-fail-1 '(* 1 2 #t 4)'
+test_fail mul-fail-2 '(define a #f) (* 1 2 a 4)'
+
+println
+test div-1 '(/ 1)' '1'
+test div-2 '(/ 1 2)' '0'
+test div-4 '(/ 10 2)' '5'
+test div-5 '(/ 20 2 (/ 2 1))' '5'
+test div-6 '(define a 5) (define b 2) (/ a b)' '2'
+test_fail div-fail-1 '(/)'
+test_fail div-fail-2 '(/ 10 2 #t 1)'
+test_fail div-fail-3 '(define a #f) (/ 10 2 a 1)'
+
+println
+test abs-1 '(abs -5)' '5'
+test abs-2 '(abs 5)' '5'
+test_fail abs-fail-1 '(abs)'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1
