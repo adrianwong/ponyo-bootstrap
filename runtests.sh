@@ -166,6 +166,41 @@ test abs-2 '(abs 5)' '5'
 test_fail abs-fail-1 '(abs)'
 
 println
+test lt-1 '(< 2)' '#t'
+test lt-2 '(< 1 2)' '#t'
+test lt-3 '(< 2 2)' '#f'
+test lt-4 '(< 1 2 3)' '#t'
+test lt-5 '(< 2 1 2)' '#f'
+test_fail lt-fail-1 '(<)'
+
+println
+test gt-1 '(> 2)' '#t'
+test gt-2 '(> 1 2)' '#f'
+test gt-3 '(> 2 2)' '#f'
+test gt-4 '(> 2 1 3)' '#f'
+test gt-5 '(> 3 2 1)' '#t'
+test_fail gt-fail-1 '(>)'
+
+println
+test num-eq-1 '(= 2)' '#t'
+test num-eq-2 '(= 1 2)' '#f'
+test num-eq-3 '(= 2 2)' '#t'
+test num-eq-4 '(= 2 1 3)' '#f'
+test num-eq-5 '(= 3 2 1)' '#f'
+test num-eq-6 '(= 2 2 2)' '#t'
+test_fail num-eq-fail-1 '(=)'
+
+println
+test eq-1 '(eq? 2 2)' '#t'
+test eq-2 '(eq? "string" "string")' '#f'
+test eq-3 "(eq? 'symbol 'symbol)" '#t'
+test eq-4 "(eq? '() '())" '#t'
+test eq-5 "(define a '(1 2)) (define b '(1 2)) (eq? a b)" '#f'
+test eq-6 "(define a '(1 2)) (define b a) (eq? a b)" '#t'
+test_fail eq-fail-1 '(eq?)'
+test_fail eq-fail-2 '(eq? 1)'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1

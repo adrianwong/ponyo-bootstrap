@@ -478,6 +478,82 @@ static Val* prim_abs(Val* args, Val* env) {
     return val->num < 0 ? make_int(-val->num) : make_int(val->num);
 }
 
+static Val* prim_lt(Val* args, Val* env) {
+    if (length(args) < 1) {
+        ERROR("invalid syntax: <");
+    }
+    Val* prev = eval(args->car, env);
+    if (prev->ty != TY_INT) {
+        ERROR("argument is not a number");
+    }
+    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
+        Val* curr = eval(a->car, env);
+        if (curr->ty != TY_INT) {
+            ERROR("argument is not a number");
+        }
+        if (prev->num >= curr->num) {
+            return FALSE;
+        }
+        prev = curr;
+    }
+    return TRUE;
+}
+
+static Val* prim_gt(Val* args, Val* env) {
+    if (length(args) < 1) {
+        ERROR("invalid syntax: >");
+    }
+    Val* prev = eval(args->car, env);
+    if (prev->ty != TY_INT) {
+        ERROR("argument is not a number");
+    }
+    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
+        Val* curr = eval(a->car, env);
+        if (curr->ty != TY_INT) {
+            ERROR("argument is not a number");
+        }
+        if (prev->num <= curr->num) {
+            return FALSE;
+        }
+        prev = curr;
+    }
+    return TRUE;
+}
+
+static Val* prim_num_eq(Val* args, Val* env) {
+    if (length(args) < 1) {
+        ERROR("invalid syntax: =");
+    }
+    Val* prev = eval(args->car, env);
+    if (prev->ty != TY_INT) {
+        ERROR("argument is not a number");
+    }
+    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
+        Val* curr = eval(a->car, env);
+        if (curr->ty != TY_INT) {
+            ERROR("argument is not a number");
+        }
+        if (prev->num != curr->num) {
+            return FALSE;
+        }
+        prev = curr;
+    }
+    return TRUE;
+}
+
+static Val* prim_eq(Val* args, Val* env) {
+    if (length(args) != 2) {
+        ERROR("invalid syntax: eq?");
+    }
+    Val* l = eval(args->car, env);
+    Val* r = eval(args->cdr->car, env);
+    if (l->ty == TY_INT && r->ty == TY_INT) {
+        return l->num == r->num ? TRUE : FALSE;
+    } else {
+        return l == r ? TRUE : FALSE;
+    }
+}
+
 static void add_prim_proc(char* name, PrimProc* p, Val* env) {
     Val* sym = intern_symbol(name);
     Val* proc = make_prim_proc(p);
@@ -489,8 +565,12 @@ static void define_prim_procs(Val* env) {
     add_prim_proc("-", prim_sub, env);
     add_prim_proc("*", prim_mul, env);
     add_prim_proc("/", prim_div, env);
+    add_prim_proc("<", prim_lt, env);
+    add_prim_proc(">", prim_gt, env);
+    add_prim_proc("=", prim_num_eq, env);
     add_prim_proc("abs", prim_abs, env);
     add_prim_proc("define", prim_define, env);
+    add_prim_proc("eq?", prim_eq, env);
     add_prim_proc("quote", prim_quote, env);
 }
 
