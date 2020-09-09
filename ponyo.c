@@ -386,6 +386,10 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_CAR    "car"
 #define PRIM_CDR    "cdr"
 #define PRIM_CONS   "cons"
+#define PRIM_IF     "if"
+#define PRIM_AND    "and"
+#define PRIM_OR     "or"
+#define PRIM_NOT    "not"
 #define PRIM_DEFINE "define"
 #define PRIM_QUOTE  "quote"
 
@@ -572,6 +576,53 @@ static Val* prim_cons(Val* args, Val* env) {
     return cons(head, tail);
 }
 
+// Note: only `#f` is considered false in conditional expressions.
+static Val* prim_if(Val* args, Val* env) {
+    check_len(PRIM_IF, args, gt, 1);
+    Val* test = eval(args->car, env);
+    if (test != FALSE) {
+        Val* con = args->cdr;
+        return eval(con->car, env);
+    } else {
+        Val* alt = args->cdr->cdr;
+        // If test yields a false value and no alternate is specified, the
+        // result of the expression is unspecified.
+        return alt == EMPTY_LIST ? NULL : eval(alt->car, env);
+    }
+}
+
+static Val* prim_and(Val* args, Val* env) {
+    Val* ret = TRUE;
+    for (Val* test = args; test != EMPTY_LIST; test = test->cdr) {
+        ret = eval(test->car, env);
+        if (ret == FALSE) {
+            break;
+        }
+    }
+    return ret;
+}
+
+static Val* prim_or(Val* args, Val* env) {
+    Val* ret = FALSE;
+    for (Val* test = args; test != EMPTY_LIST; test = test->cdr) {
+        ret = eval(test->car, env);
+        if (ret != FALSE) {
+            break;
+        }
+    }
+    return ret;
+}
+
+static Val* prim_not(Val* args, Val* env) {
+    check_len(PRIM_NOT, args, eq, 1);
+    Val* val = eval(args->car, env);
+    if (val == FALSE) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
 static Val* prim_define(Val* args, Val* env) {
     check_len(PRIM_DEFINE, args, eq, 2);
     check_typ(PRIM_DEFINE, args->car, TY_SYMBOL);
@@ -607,6 +658,11 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_CAR, prim_car, env);
     add_prim_proc(PRIM_CDR, prim_cdr, env);
     add_prim_proc(PRIM_CONS, prim_cons, env);
+
+    add_prim_proc(PRIM_IF, prim_if, env);
+    add_prim_proc(PRIM_AND, prim_and, env);
+    add_prim_proc(PRIM_OR, prim_or, env);
+    add_prim_proc(PRIM_NOT, prim_not, env);
 
     add_prim_proc(PRIM_DEFINE, prim_define, env);
     add_prim_proc(PRIM_QUOTE, prim_quote, env);

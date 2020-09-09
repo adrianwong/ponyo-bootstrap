@@ -228,6 +228,37 @@ test_fail cons-fail-1 '(cons)'
 test_fail cons-fail-2 '(cons 1)'
 
 println
+test if-1 '(if #t 1 2)' '1'
+test if-2 '(if 10 1 2)' '1'
+test if-3 "(if '() 1 2)" '1'
+test if-4 '(if #f 1 2)' '2'
+test if-5 '(if #t 1)' '1'
+test if-6 '(if #f 1)' ''
+test_fail if-fail-1 '(if)'
+test_fail if-fail-2 '(if 1)'
+
+println
+test not-1 '(not #t)' '#f'
+test not-2 '(not 3)' '#f'
+test not-3 "(not '(3))" '#f'
+test not-4 '(not #f)' '#t'
+test not-5 "(not '())" '#f'
+test not-6 '(not "string")' '#f'
+test_fail not-fail-1 '(not)'
+
+println
+test and-1 '(and (= 2 2) (> 2 1))' '#t'
+test and-2 '(and (= 2 2) (< 2 1) #t)' '#f'
+test and-3 "(and 1 2 'c '(f g))" '(f g)'
+test and-4 '(and)' '#t'
+
+println
+test or-1 '(or (= 2 2) (> 2 1))' '#t'
+test or-2 '(or (< 2 1) (= 2 1) #f)' '#f'
+test or-3 "(or #f 2 'c '(f g))" '2'
+test or-4 '(or)' '#f'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1
