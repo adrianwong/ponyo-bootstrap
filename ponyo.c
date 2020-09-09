@@ -39,8 +39,8 @@ struct Val {
         int num;
         // Pair.
         struct {
-            struct Val* car;
-            struct Val* cdr;
+            Val* car;
+            Val* cdr;
         };
         // Primitive procedure.
         PrimProc* proc;
@@ -79,16 +79,16 @@ static Val* malloc_val(Type ty) {
     return val;
 }
 
+static Val* make_int(int num) {
+    Val* val = malloc_val(TY_INT);
+    val->num = num;
+    return val;
+}
+
 static Val* cons(Val* car, Val* cdr) {
     Val* val = malloc_val(TY_PAIR);
     val->car = car;
     val->cdr = cdr;
-    return val;
-}
-
-static Val* make_int(int num) {
-    Val* val = malloc_val(TY_INT);
-    val->num = num;
     return val;
 }
 
@@ -308,7 +308,7 @@ static Val* lookup_variable(Val* var, Val* env) {
             vars = vars->cdr;
             vals = vals->cdr;
         }
-        // Not found, search next frame.
+        // Not found in current frame, search enclosing environment.
         env = env->cdr;
     }
     ERROR("unbound variable: %s", var->str);
@@ -332,7 +332,7 @@ static void define_variable(Val* var, Val* val, Val* env) {
         vars = vars->cdr;
         vals = vals->cdr;
     }
-    // Else adjoin one to the first frame.
+    // If binding doesn't exist, adjoin one to the first frame.
     add_binding(var, val, first_frame);
 }
 
@@ -358,13 +358,13 @@ static Val* eval(Val* val, Val* env) {
         return val;
     case TY_EMPTY_LIST:
         ERROR("invalid syntax: ()");
-    case TY_SYMBOL:
-        return lookup_variable(val, env);
     case TY_PAIR: {
         Val* proc = eval(val->car, env);
         Val* args = val->cdr;
         return apply(proc, args, env);
     }
+    case TY_SYMBOL:
+        return lookup_variable(val, env);
     default:
         return NULL;
     }
@@ -399,7 +399,8 @@ static int len(Val* val) {
         len++;
         val = val->cdr;
     }
-    return val == EMPTY_LIST ? len : -1; // -1 if list is improper.
+    // -1 if list is improper.
+    return val == EMPTY_LIST ? len : -1;
 }
 
 static char gt(int a, int b) { return a  > b ? 1 : 0; }
