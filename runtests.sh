@@ -281,6 +281,26 @@ test listproc-2 '(list 1 2)' '(1 2)'
 test listproc-3 '(list (list 1 2) (list 3))' '((1 2) (3))'
 
 println
+test let-1 '(let ((v 30)) (+ v v))' '60'
+test let-2 '(let ((x 2) (y 3)) (* x y))' '6'
+test let-3 '(let ((x 2) (y 3)) (let ((x 7) (z (+ x y))) (* z x)))' '35'
+test_fail test-fail-let-1 '(let)'
+test_fail test-fail-let-2 '(let 1)'
+test_fail test-fail-let-3 '(let (x) x)'
+test_fail test-fail-let-4 '(let ((1)) 1)'
+test_fail test-fail-let-5 '(let ((x)) x)'
+
+println
+test cond-1 "(cond ((= 1 1) 'a) ((= 2 2) 'b))" 'a'
+test cond-2 "(cond ((= 1 1) 'a 'c) ((= 2 2) 'b))" 'c'
+test cond-3 "(cond ((> 1 1) 'a) ((= 2 2) 'b))" 'b'
+test cond-4 "(cond ((> 1 1) 'a) ((< 2 2) 'b) (else 'c))" 'c'
+test cond-5 "(cond ((> 1 1) 'a) ((< 2 2) 'b) (else 'c 'd))" 'd'
+test cond-6 "(cond (1 'a) ((< 2 2) 'b))" 'a'
+test cond-7 "(cond (1 'a 'c) ((< 2 2) 'b))" 'c'
+test_fail cond-fail-1 '(cond)'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1

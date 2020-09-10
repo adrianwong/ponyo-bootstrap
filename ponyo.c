@@ -449,12 +449,14 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_CAR    "car"
 #define PRIM_CDR    "cdr"
 #define PRIM_CONS   "cons"
+#define PRIM_COND   "cond"
 #define PRIM_IF     "if"
 #define PRIM_AND    "and"
 #define PRIM_OR     "or"
 #define PRIM_NOT    "not"
 #define PRIM_DEFINE "define"
 #define PRIM_LAMBDA "lambda"
+#define PRIM_LET    "let"
 #define PRIM_LIST   "list"
 #define PRIM_QUOTE  "quote"
 
@@ -632,6 +634,30 @@ static Val* prim_cons(Val* args, Val* env) {
     return cons(head, tail);
 }
 
+static Val* prim_cond(Val* args, Val* env) {
+    check_len(PRIM_COND, args, gt, 0);
+    for (Val* a = args; a != EMPTY_LIST; a = a->cdr) {
+        check_typ(PRIM_COND, a->car, TY_PAIR);
+        Val* test = a->car->car;
+        Val* exps = a->car->cdr;
+        if (test == intern_symbol("else")) {
+            if (a->cdr != EMPTY_LIST) {
+                ERROR("%s: else clause must be last", PRIM_COND);
+            }
+        } else {
+            if (eval(test, env) == FALSE) {
+                continue;
+            }
+        }
+        Val* result;
+        for (; exps != EMPTY_LIST; exps = exps->cdr) {
+            result = eval(exps->car, env);
+        }
+        return result;
+    }
+    return NULL;
+}
+
 // Note: only `#f` is considered false in conditional expressions.
 static Val* prim_if(Val* args, Val* env) {
     check_len(PRIM_IF, args, gt, 1);
@@ -715,6 +741,27 @@ static Val* prim_lambda(Val* args, Val* env) {
     return make_comp_proc(params, body, env);
 }
 
+// Desugars `(let ((var val)) body)` to `((lambda (var) body) val)`.
+static Val* prim_let(Val* args, Val* env) {
+    check_len(PRIM_LET, args, gt, 1);
+    Val* vars = EMPTY_LIST;
+    Val* vals = EMPTY_LIST;
+    for (Val* b = args->car; b != EMPTY_LIST; b = b->cdr) {
+        check_typ(PRIM_LET, b->car, TY_PAIR);
+        check_len(PRIM_LET, b->car, eq, 2);
+
+        Val* var = b->car->car;
+        check_typ(PRIM_LET, var, TY_SYMBOL);
+        vars = cons(var, vars);
+
+        Val* val = b->car->cdr->car;
+        vals = cons(val, vals);
+    }
+    Val* body = args->cdr;
+    Val* lambda = make_comp_proc(vars, body, env);
+    return eval(cons(lambda, vals), env);
+}
+
 static Val* prim_list(Val* args, Val* env) {
     Val* list = EMPTY_LIST;
     for (; args != EMPTY_LIST; args = args->cdr) {
@@ -750,6 +797,7 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_CDR, prim_cdr, env);
     add_prim_proc(PRIM_CONS, prim_cons, env);
 
+    add_prim_proc(PRIM_COND, prim_cond, env);
     add_prim_proc(PRIM_IF, prim_if, env);
     add_prim_proc(PRIM_AND, prim_and, env);
     add_prim_proc(PRIM_OR, prim_or, env);
@@ -757,6 +805,7 @@ static void define_prim_procs(Val* env) {
 
     add_prim_proc(PRIM_DEFINE, prim_define, env);
     add_prim_proc(PRIM_LAMBDA, prim_lambda, env);
+    add_prim_proc(PRIM_LET, prim_let, env);
     add_prim_proc(PRIM_LIST, prim_list, env);
     add_prim_proc(PRIM_QUOTE, prim_quote, env);
 }
