@@ -124,15 +124,15 @@ static Val* make_string_or_symbol(Type ty, char* str) {
 }
 
 // Returns a symbol if it already exists, creates it otherwise.
-static Val* intern_symbol(char* sym) {
+static Val* intern_symbol(char* str) {
     for (Val* s = symbol_list; s != EMPTY_LIST; s = s->cdr) {
-        if (strcmp(sym, s->car->str) == 0) {
+        if (strcmp(str, s->car->str) == 0) {
             return s->car;
         }
     }
-    Val* val = make_string_or_symbol(TY_SYMBOL, sym);
-    symbol_list = cons(val, symbol_list);
-    return val;
+    Val* sym = make_string_or_symbol(TY_SYMBOL, str);
+    symbol_list = cons(sym, symbol_list);
+    return sym;
 }
 
 /*------------------------------------------------------------------------------
@@ -215,19 +215,18 @@ static Val* read_list(int c) {
 }
 
 static Val* read_quote(void) {
-    Val* val = read();
-    if (val == NULL) {
+    Val* quote = read();
+    if (quote == NULL) {
         ERROR("unexpected EOF reading quote");
     }
     Val* sym = intern_symbol("quote");
-    return cons(sym, cons(val, EMPTY_LIST));
+    return cons(sym, cons(quote, EMPTY_LIST));
 }
 
 static Val* read_string(void) {
     char buffer[STRING_MAX_LEN + 1];
     int i = 0;
-    int c = getchar();
-    while (c != '"') {
+    for (int c = getchar(); c != '"'; c = getchar()) {
         if (c == EOF) {
             ERROR("unterminated string");
         } else if (c == '\\') {
@@ -251,7 +250,6 @@ static Val* read_string(void) {
         } else {
             ERROR("string too long");
         }
-        c = getchar();
     }
     buffer[i] = '\0';
     return make_string_or_symbol(TY_STRING, buffer);
@@ -306,18 +304,32 @@ static Val* read(void) {
 }
 
 /*------------------------------------------------------------------------------
- | ENVIRONMENT
+ | LIST HELPERS
  -----------------------------------------------------------------------------*/
 
-static int len(Val* val) {
+static int len(Val* list) {
     int len = 0;
-    while (val->ty == TY_PAIR) {
+    for (; list->ty == TY_PAIR; list = list->cdr) {
         len++;
-        val = val->cdr;
     }
     // -1 if list is improper.
-    return val == EMPTY_LIST ? len : -1;
+    return list == EMPTY_LIST ? len : -1;
 }
+
+static Val* rev(Val* list) {
+    Val* prev = EMPTY_LIST;
+    while (list != EMPTY_LIST) {
+        Val* next = list->cdr;
+        list->cdr = prev;
+        prev = list;
+        list = next;
+    }
+    return prev;
+}
+
+/*------------------------------------------------------------------------------
+ | ENVIRONMENT
+ -----------------------------------------------------------------------------*/
 
 static Val* extend_env(Val* vars, Val* vals, Val* env) {
     if (len(vars) != len(vals)) {
@@ -327,21 +339,17 @@ static Val* extend_env(Val* vars, Val* vals, Val* env) {
 }
 
 static Val* lookup_variable(Val* var, Val* env) {
-    while (env != EMPTY_LIST) {
+    for (; env != EMPTY_LIST; env = env->cdr) {
         Val* frame = env->car;
         Val* vars = frame->car;
         Val* vals = frame->cdr;
-        while (vars != EMPTY_LIST) {
+        for (; vars != EMPTY_LIST; vars = vars->cdr, vals = vals->cdr) {
             // Note: `strcmp` is unnecessary. Symbols are interned, so
             // pointer comparison is sufficient.
             if (var == vars->car) {
                 return vals->car;
             }
-            vars = vars->cdr;
-            vals = vals->cdr;
         }
-        // Not found in current frame, search enclosing environment.
-        env = env->cdr;
     }
     ERROR("unbound variable: %s", var->str);
 }
@@ -355,14 +363,12 @@ static void define_variable(Val* var, Val* val, Val* env) {
     Val* first_frame = env->car;
     Val* vars = first_frame->car;
     Val* vals = first_frame->cdr;
-    while (vars != EMPTY_LIST) {
+    for (; vars != EMPTY_LIST; vars = vars->cdr, vals = vals->cdr) {
         // Change the binding if it exists.
         if (var == vars->car) {
             vals->car = val;
             return;
         }
-        vars = vars->cdr;
-        vals = vals->cdr;
     }
     // If binding doesn't exist, adjoin one to the first frame.
     add_binding(var, val, first_frame);
@@ -374,30 +380,32 @@ static void define_variable(Val* var, Val* val, Val* env) {
 
 static Val* eval(Val* val, Val* env);
 
-static Val* apply(Val* val, Val* args, Val* env) {
-    if (val->ty == TY_PRIM_PROC) {
-        return val->proc(args, env);
-    } else if (val->ty == TY_COMP_PROC) {
-        if (len(val->params) != len(args)) {
+static Val* apply(Val* proc, Val* args, Val* env) {
+    if (proc->ty == TY_PRIM_PROC) {
+        return proc->proc(args, env);
+    } else if (proc->ty == TY_COMP_PROC) {
+        Val* params = proc->params;
+        if (len(params) != len(args)) {
             ERROR("incorrect number of arguments to procedure");
         }
-        // Evaluate the args list, but store the results in reverse. This
-        // shouldn't matter, as the params list is reversed too.
-        Val* vars = EMPTY_LIST;
+
+        // Extend the base environment carried by the procedure to include a
+        // frame that binds the parameters of the procedure to the arguments
+        // to which the procedure is to be applied.
+        Val* vars = proc->params;
         Val* vals = EMPTY_LIST;
-        for (Val* p = val->params; p != EMPTY_LIST; p = p->cdr) {
-            vars = cons(p->car, vars);
+        for (; args != EMPTY_LIST; args = args->cdr) {
             vals = cons(eval(args->car, env), vals);
-            args = args->cdr;
         }
-        Val* new_env = extend_env(vars, vals, val->env);
-        // Evaluate the expressions in the procedure body, returning the value
-        // of the final expression.
-        Val* ret;
-        for (Val* b = val->body; b != EMPTY_LIST; b = b->cdr) {
-            ret = eval(b->car, new_env);
+        Val* penv = extend_env(vars, rev(vals), proc->env);
+
+        // Evaluate the expressions in the procedure body, returning the
+        // result of the final expression.
+        Val* result;
+        for (Val* b = proc->body; b != EMPTY_LIST; b = b->cdr) {
+            result = eval(b->car, penv);
         }
-        return ret;
+        return result;
     } else {
         ERROR("unknown procedure type");
     }
@@ -407,12 +415,13 @@ static Val* eval(Val* val, Val* env) {
     switch (val->ty) {
     case TY_FALSE:
     case TY_TRUE:
+    case TY_COMP_PROC:
     case TY_INT:
-    case TY_STRING:
     case TY_PRIM_PROC:
+    case TY_STRING:
         return val;
     case TY_EMPTY_LIST:
-        ERROR("invalid syntax: ()");
+        ERROR("empty application: ()");
     case TY_PAIR: {
         Val* proc = eval(val->car, env);
         Val* args = val->cdr;
@@ -420,9 +429,8 @@ static Val* eval(Val* val, Val* env) {
     }
     case TY_SYMBOL:
         return lookup_variable(val, env);
-    default:
-        return NULL;
     }
+    return NULL;
 }
 
 /*------------------------------------------------------------------------------
@@ -461,63 +469,63 @@ static void check_len(char* proc, Val* args, char (*op)(int, int), int exp) {
 // characters as `check_len`. Fight me.
 static void check_typ(char* proc, Val* arg, Type exp) {
     if (arg->ty != exp) {
-        char* type;
+        char* ty;
         switch (exp) {
         case TY_FALSE:
         case TY_TRUE:
-            type = "boolean";
+            ty = "boolean";
             break;
         case TY_INT:
-            type = "number";
+            ty = "number";
             break;
         case TY_PAIR:
-            type = "pair";
+            ty = "pair";
             break;
         case TY_STRING:
-            type = "string";
+            ty = "string";
             break;
         case TY_SYMBOL:
-            type = "symbol";
+            ty = "symbol";
             break;
         default:
             ERROR("argument is not of the expected type");
         }
-        ERROR("%s: argument is not a %s", proc, type);
+        ERROR("%s: argument is not a %s", proc, ty);
     }
 }
 
 static Val* prim_add(Val* args, Val* env) {
     int sum = 0;
-    for (Val* a = args; a != EMPTY_LIST; a = a->cdr) {
-        Val* val = eval(a->car, env);
-        check_typ(PRIM_ADD, val, TY_INT);
-        sum += val->num;
+    for (; args != EMPTY_LIST; args = args->cdr) {
+        Val* num = eval(args->car, env);
+        check_typ(PRIM_ADD, num, TY_INT);
+        sum += num->num;
     }
     return make_int(sum);
 }
 
 static Val* prim_sub(Val* args, Val* env) {
     check_len(PRIM_SUB, args, gt, 0);
-    Val* val = eval(args->car, env);
-    check_typ(PRIM_SUB, val, TY_INT);
+    Val* num = eval(args->car, env);
+    check_typ(PRIM_SUB, num, TY_INT);
     if (args->cdr == EMPTY_LIST) {
-        return make_int(-val->num);
+        return make_int(-num->num);
     }
-    int sum = val->num;
-    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
-        Val* val = eval(a->car, env);
-        check_typ(PRIM_SUB, val, TY_INT);
-        sum -= val->num;
+    int sum = num->num;
+    for (args = args->cdr; args != EMPTY_LIST; args = args->cdr) {
+        num = eval(args->car, env);
+        check_typ(PRIM_SUB, num, TY_INT);
+        sum -= num->num;
     }
     return make_int(sum);
 }
 
 static Val* prim_mul(Val* args, Val* env) {
     int sum = 1;
-    for (Val* a = args; a != EMPTY_LIST; a = a->cdr) {
-        Val* val = eval(a->car, env);
-        check_typ(PRIM_MUL, val, TY_INT);
-        sum *= val->num;
+    for (; args != EMPTY_LIST; args = args->cdr) {
+        Val* num = eval(args->car, env);
+        check_typ(PRIM_MUL, num, TY_INT);
+        sum *= num->num;
     }
     return make_int(sum);
 }
@@ -525,33 +533,33 @@ static Val* prim_mul(Val* args, Val* env) {
 // No support for rational values (yet?).
 static Val* prim_div(Val* args, Val* env) {
     check_len(PRIM_DIV, args, gt, 0);
-    Val* val = eval(args->car, env);
-    check_typ(PRIM_DIV, val, TY_INT);
+    Val* num = eval(args->car, env);
+    check_typ(PRIM_DIV, num, TY_INT);
     if (args->cdr == EMPTY_LIST) {
-        return make_int(val->num);
+        return make_int(num->num);
     }
-    int sum = val->num;
-    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
-        Val* val = eval(a->car, env);
-        check_typ(PRIM_DIV, val, TY_INT);
-        sum /= val->num;
+    int sum = num->num;
+    for (args = args->cdr; args != EMPTY_LIST; args = args->cdr) {
+        num = eval(args->car, env);
+        check_typ(PRIM_DIV, num, TY_INT);
+        sum /= num->num;
     }
     return make_int(sum);
 }
 
 static Val* prim_abs(Val* args, Val* env) {
     check_len(PRIM_ABS, args, eq, 1);
-    Val* val = eval(args->car, env);
-    check_typ(PRIM_ABS, val, TY_INT);
-    return val->num < 0 ? make_int(-val->num) : make_int(val->num);
+    Val* num = eval(args->car, env);
+    check_typ(PRIM_ABS, num, TY_INT);
+    return num->num < 0 ? make_int(-num->num) : make_int(num->num);
 }
 
 static Val* prim_lt(Val* args, Val* env) {
     check_len(PRIM_LT, args, gt, 0);
     Val* prev = eval(args->car, env);
     check_typ(PRIM_LT, prev, TY_INT);
-    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
-        Val* curr = eval(a->car, env);
+    for (args = args->cdr; args != EMPTY_LIST; args = args->cdr) {
+        Val* curr = eval(args->car, env);
         check_typ(PRIM_LT, curr, TY_INT);
         if (prev->num >= curr->num) {
             return FALSE;
@@ -565,8 +573,8 @@ static Val* prim_gt(Val* args, Val* env) {
     check_len(PRIM_GT, args, gt, 0);
     Val* prev = eval(args->car, env);
     check_typ(PRIM_GT, prev, TY_INT);
-    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
-        Val* curr = eval(a->car, env);
+    for (args = args->cdr; args != EMPTY_LIST; args = args->cdr) {
+        Val* curr = eval(args->car, env);
         check_typ(PRIM_GT, curr, TY_INT);
         if (prev->num <= curr->num) {
             return FALSE;
@@ -580,8 +588,8 @@ static Val* prim_num_eq(Val* args, Val* env) {
     check_len(PRIM_NUM_EQ, args, gt, 0);
     Val* prev = eval(args->car, env);
     check_typ(PRIM_NUM_EQ, prev, TY_INT);
-    for (Val* a = args->cdr; a != EMPTY_LIST; a = a->cdr) {
-        Val* curr = eval(a->car, env);
+    for (args = args->cdr; args != EMPTY_LIST; args = args->cdr) {
+        Val* curr = eval(args->car, env);
         check_typ(PRIM_NUM_EQ, curr, TY_INT);
         if (prev->num != curr->num) {
             return FALSE;
@@ -604,16 +612,16 @@ static Val* prim_eq(Val* args, Val* env) {
 
 static Val* prim_car(Val* args, Val* env) {
     check_len(PRIM_CAR, args, eq, 1);
-    Val* val = eval(args->car, env);
-    check_typ(PRIM_CAR, val, TY_PAIR);
-    return val->car;
+    Val* list = eval(args->car, env);
+    check_typ(PRIM_CAR, list, TY_PAIR);
+    return list->car;
 }
 
 static Val* prim_cdr(Val* args, Val* env) {
     check_len(PRIM_CDR, args, eq, 1);
-    Val* val = eval(args->car, env);
-    check_typ(PRIM_CDR, val, TY_PAIR);
-    return val->cdr;
+    Val* list = eval(args->car, env);
+    check_typ(PRIM_CDR, list, TY_PAIR);
+    return list->cdr;
 }
 
 static Val* prim_cons(Val* args, Val* env) {
@@ -628,42 +636,42 @@ static Val* prim_if(Val* args, Val* env) {
     check_len(PRIM_IF, args, gt, 1);
     Val* test = eval(args->car, env);
     if (test != FALSE) {
-        Val* con = args->cdr;
-        return eval(con->car, env);
+        Val* conseq = args->cdr;
+        return eval(conseq->car, env);
     } else {
-        Val* alt = args->cdr->cdr;
         // If test yields a false value and no alternate is specified, the
         // result of the expression is unspecified.
-        return alt == EMPTY_LIST ? NULL : eval(alt->car, env);
+        Val* altern = args->cdr->cdr;
+        return altern == EMPTY_LIST ? NULL : eval(altern->car, env);
     }
 }
 
 static Val* prim_and(Val* args, Val* env) {
-    Val* ret = TRUE;
-    for (Val* test = args; test != EMPTY_LIST; test = test->cdr) {
-        ret = eval(test->car, env);
-        if (ret == FALSE) {
+    Val* result = TRUE;
+    for (; args != EMPTY_LIST; args = args->cdr) {
+        result = eval(args->car, env);
+        if (result == FALSE) {
             break;
         }
     }
-    return ret;
+    return result;
 }
 
 static Val* prim_or(Val* args, Val* env) {
-    Val* ret = FALSE;
-    for (Val* test = args; test != EMPTY_LIST; test = test->cdr) {
-        ret = eval(test->car, env);
-        if (ret != FALSE) {
+    Val* result = FALSE;
+    for (; args != EMPTY_LIST; args = args->cdr) {
+        result = eval(args->car, env);
+        if (result != FALSE) {
             break;
         }
     }
-    return ret;
+    return result;
 }
 
 static Val* prim_not(Val* args, Val* env) {
     check_len(PRIM_NOT, args, eq, 1);
-    Val* val = eval(args->car, env);
-    if (val == FALSE) {
+    Val* result = eval(args->car, env);
+    if (result == FALSE) {
         return TRUE;
     } else {
         return FALSE;
@@ -749,11 +757,24 @@ static void define_prim_procs(Val* env) {
 
 static void print(Val* val);
 
-static void print_string(Val* val) {
+static void print_list(Val* list) {
+    printf("(");
+    print(list->car);
+    for (list = list->cdr; list->ty == TY_PAIR; list = list->cdr) {
+        printf(" ");
+        print(list->car);
+    }
+    if (list != EMPTY_LIST) {
+        printf(" . ");
+        print(list);
+    }
+    printf(")");
+}
+
+static void print_string(Val* str) {
     printf("\"");
-    char* str = val->str;
-    while (*str != '\0') {
-        switch (*str) {
+    for (char* c = str->str; *c != '\0'; c++) {
+        switch (*c) {
         case '\t':
             printf("\\t");
             break;
@@ -770,28 +791,11 @@ static void print_string(Val* val) {
             printf("\\\"");
             break;
         default:
-            printf("%c", *str);
+            printf("%c", *c);
             break;
         }
-        str++;
     }
     printf("\"");
-}
-
-static void print_list(Val* val) {
-    printf("(");
-    print(val->car);
-    Val* cdr = val->cdr;
-    while (cdr->ty == TY_PAIR) {
-        printf(" ");
-        print(cdr->car);
-        cdr = cdr->cdr;
-    }
-    if (cdr != EMPTY_LIST) {
-        printf(" . ");
-        print(cdr);
-    }
-    printf(")");
 }
 
 static void print(Val* val) {
@@ -811,14 +815,14 @@ static void print(Val* val) {
     case TY_INT:
         printf("%d", val->num);
         break;
-    case TY_STRING:
-        print_string(val);
-        break;
     case TY_PAIR:
         print_list(val);
         break;
     case TY_PRIM_PROC:
         printf("#<primitive-procedure>");
+        break;
+    case TY_STRING:
+        print_string(val);
         break;
     case TY_SYMBOL:
         printf("%s", val->str);
