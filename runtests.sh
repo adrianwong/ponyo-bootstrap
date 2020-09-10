@@ -301,6 +301,33 @@ test cond-7 "(cond (1 'a 'c) ((< 2 2) 'b))" 'c'
 test_fail cond-fail-1 '(cond)'
 
 println
+test is-int-1 "(integer? '())" '#f'
+test is-int-2 '(integer? 123)' '#t'
+test is-int-3 "(integer? (car '(1)))" '#t'
+
+println
+test is-null-1 "(null? '())" '#t'
+test is-null-2 '(null? #t)' '#f'
+test is-null-3 "(null? (cdr '(1)))" '#t'
+
+println
+test is_pair-1 '(pair? #t)' '#f'
+test is_pair-2 "(pair? '())" '#f'
+test is_pair-3 "(pair? '(1))" '#t'
+test is_pair-4 "(pair? '(1 2))" '#t'
+test is_pair-5 "(pair? (list 1 2))" '#t'
+
+println
+test is-str-1 "(string? 'string)" '#f'
+test is-str-2 '(string? "123")' '#t'
+test is-str-3 '(string? "")' '#t'
+
+println
+test is-sym-1 "(symbol? 'symbol)" '#t'
+test is-sym-2 '(symbol? "123")' '#f'
+test is-sym-3 "(symbol? (if #f 'a 2))" '#f'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1

@@ -437,28 +437,33 @@ static Val* eval(Val* val, Val* env) {
  | PRIMITIVE PROCEDURES
  -----------------------------------------------------------------------------*/
 
-#define PRIM_ADD    "+"
-#define PRIM_SUB    "-"
-#define PRIM_MUL    "*"
-#define PRIM_DIV    "/"
-#define PRIM_ABS    "abs"
-#define PRIM_LT     "<"
-#define PRIM_GT     ">"
-#define PRIM_NUM_EQ "="
-#define PRIM_EQ     "eq?"
-#define PRIM_CAR    "car"
-#define PRIM_CDR    "cdr"
-#define PRIM_CONS   "cons"
-#define PRIM_COND   "cond"
-#define PRIM_IF     "if"
-#define PRIM_AND    "and"
-#define PRIM_OR     "or"
-#define PRIM_NOT    "not"
-#define PRIM_DEFINE "define"
-#define PRIM_LAMBDA "lambda"
-#define PRIM_LET    "let"
-#define PRIM_LIST   "list"
-#define PRIM_QUOTE  "quote"
+#define PRIM_ADD     "+"
+#define PRIM_SUB     "-"
+#define PRIM_MUL     "*"
+#define PRIM_DIV     "/"
+#define PRIM_ABS     "abs"
+#define PRIM_LT      "<"
+#define PRIM_GT      ">"
+#define PRIM_NUM_EQ  "="
+#define PRIM_EQ      "eq?"
+#define PRIM_CAR     "car"
+#define PRIM_CDR     "cdr"
+#define PRIM_CONS    "cons"
+#define PRIM_COND    "cond"
+#define PRIM_IF      "if"
+#define PRIM_AND     "and"
+#define PRIM_OR      "or"
+#define PRIM_NOT     "not"
+#define PRIM_DEFINE  "define"
+#define PRIM_LAMBDA  "lambda"
+#define PRIM_LET     "let"
+#define PRIM_LIST    "list"
+#define PRIM_QUOTE   "quote"
+#define PRIM_IS_INT  "integer?"
+#define PRIM_IS_NULL "null?"
+#define PRIM_IS_PAIR "pair?"
+#define PRIM_IS_STR  "string?"
+#define PRIM_IS_SYM  "symbol?"
 
 static char gt(int a, int b) { return a  > b ? 1 : 0; }
 static char eq(int a, int b) { return a == b ? 1 : 0; }
@@ -781,6 +786,36 @@ static void add_prim_proc(char* name, PrimProc* p, Val* env) {
     define_variable(sym, proc, env);
 }
 
+static Val* prim_is_int(Val* args, Val* env) {
+    check_len(PRIM_IS_INT, args, eq, 1);
+    Val* val = eval(args->car, env);
+    return val->ty == TY_INT ? TRUE : FALSE;
+}
+
+static Val* prim_is_null(Val* args, Val* env) {
+    check_len(PRIM_IS_NULL, args, eq, 1);
+    Val* val = eval(args->car, env);
+    return val->ty == TY_EMPTY_LIST ? TRUE : FALSE;
+}
+
+static Val* prim_is_pair(Val* args, Val* env) {
+    check_len(PRIM_IS_PAIR, args, eq, 1);
+    Val* val = eval(args->car, env);
+    return val->ty == TY_PAIR ? TRUE : FALSE;
+}
+
+static Val* prim_is_str(Val* args, Val* env) {
+    check_len(PRIM_IS_STR, args, eq, 1);
+    Val* val = eval(args->car, env);
+    return val->ty == TY_STRING ? TRUE : FALSE;
+}
+
+static Val* prim_is_sym(Val* args, Val* env) {
+    check_len(PRIM_IS_SYM, args, eq, 1);
+    Val* val = eval(args->car, env);
+    return val->ty == TY_SYMBOL ? TRUE : FALSE;
+}
+
 static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_ADD, prim_add, env);
     add_prim_proc(PRIM_SUB, prim_sub, env);
@@ -808,6 +843,12 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_LET, prim_let, env);
     add_prim_proc(PRIM_LIST, prim_list, env);
     add_prim_proc(PRIM_QUOTE, prim_quote, env);
+
+    add_prim_proc(PRIM_IS_INT, prim_is_int, env);
+    add_prim_proc(PRIM_IS_NULL, prim_is_null, env);
+    add_prim_proc(PRIM_IS_PAIR, prim_is_pair, env);
+    add_prim_proc(PRIM_IS_STR, prim_is_str, env);
+    add_prim_proc(PRIM_IS_SYM, prim_is_sym, env);
 }
 
 /*------------------------------------------------------------------------------
