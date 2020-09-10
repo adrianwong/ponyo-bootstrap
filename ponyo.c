@@ -455,6 +455,7 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_NOT    "not"
 #define PRIM_DEFINE "define"
 #define PRIM_LAMBDA "lambda"
+#define PRIM_LIST   "list"
 #define PRIM_QUOTE  "quote"
 
 static char gt(int a, int b) { return a  > b ? 1 : 0; }
@@ -714,6 +715,14 @@ static Val* prim_lambda(Val* args, Val* env) {
     return make_comp_proc(params, body, env);
 }
 
+static Val* prim_list(Val* args, Val* env) {
+    Val* list = EMPTY_LIST;
+    for (; args != EMPTY_LIST; args = args->cdr) {
+        list = cons(eval(args->car, env), list);
+    }
+    return rev(list);
+}
+
 static Val* prim_quote(Val* args, Val* env) {
     check_len(PRIM_QUOTE, args, eq, 1);
     return args->car;
@@ -748,6 +757,7 @@ static void define_prim_procs(Val* env) {
 
     add_prim_proc(PRIM_DEFINE, prim_define, env);
     add_prim_proc(PRIM_LAMBDA, prim_lambda, env);
+    add_prim_proc(PRIM_LIST, prim_list, env);
     add_prim_proc(PRIM_QUOTE, prim_quote, env);
 }
 

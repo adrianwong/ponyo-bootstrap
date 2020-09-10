@@ -276,6 +276,11 @@ test proc-5 '(define (g n)
 test proc-6 '(define (square) (define (f n) (* n n)) f) ((square) 15)' '225'
 
 println
+test listproc-1 '(list)' '()'
+test listproc-2 '(list 1 2)' '(1 2)'
+test listproc-3 '(list (list 1 2) (list 3))' '((1 2) (3))'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1
