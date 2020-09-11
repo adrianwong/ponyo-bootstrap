@@ -459,6 +459,9 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_LET     "let"
 #define PRIM_LIST    "list"
 #define PRIM_QUOTE   "quote"
+#define PRIM_SET     "set!"
+#define PRIM_SET_CAR "set-car!"
+#define PRIM_SET_CDR "set-cdr!"
 #define PRIM_IS_INT  "integer?"
 #define PRIM_IS_NULL "null?"
 #define PRIM_IS_PAIR "pair?"
@@ -780,6 +783,33 @@ static Val* prim_quote(Val* args, Val* env) {
     return args->car;
 }
 
+static Val* prim_set(Val* args, Val* env) {
+    check_len(PRIM_SET, args, eq, 2);
+    Val* var = args->car;
+    check_typ(PRIM_SET, var, TY_SYMBOL);
+    Val* val = eval(args->cdr->car, env);
+    define_variable(var, val, env);
+    return NULL;
+}
+
+static Val* prim_set_car(Val* args, Val* env) {
+    check_len(PRIM_SET_CAR, args, eq, 2);
+    Val* var = eval(args->car, env);
+    check_typ(PRIM_SET_CAR, var, TY_PAIR);
+    Val* val = eval(args->cdr->car, env);
+    var->car = val;
+    return NULL;
+}
+
+static Val* prim_set_cdr(Val* args, Val* env) {
+    check_len(PRIM_SET_CDR, args, eq, 2);
+    Val* var = eval(args->car, env);
+    check_typ(PRIM_SET_CDR, var, TY_PAIR);
+    Val* val = eval(args->cdr->car, env);
+    var->cdr = val;
+    return NULL;
+}
+
 static void add_prim_proc(char* name, PrimProc* p, Val* env) {
     Val* sym = intern_symbol(name);
     Val* proc = make_prim_proc(p);
@@ -843,6 +873,10 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_LET, prim_let, env);
     add_prim_proc(PRIM_LIST, prim_list, env);
     add_prim_proc(PRIM_QUOTE, prim_quote, env);
+
+    add_prim_proc(PRIM_SET, prim_set, env);
+    add_prim_proc(PRIM_SET_CAR, prim_set_car, env);
+    add_prim_proc(PRIM_SET_CDR, prim_set_cdr, env);
 
     add_prim_proc(PRIM_IS_INT, prim_is_int, env);
     add_prim_proc(PRIM_IS_NULL, prim_is_null, env);

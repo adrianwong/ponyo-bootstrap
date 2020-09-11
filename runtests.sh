@@ -328,6 +328,37 @@ test is-sym-2 '(symbol? "123")' '#f'
 test is-sym-3 "(symbol? (if #f 'a 2))" '#f'
 
 println
+test set-1 '(set! x 1) x' '1'
+test set-2 '(define x #t) (set! x 123) x' '123'
+test set-3 '(define x 123) (set! x (= 1 2)) x' '#f'
+test_fail set-fail-1 '(set!)'
+test_fail set-fail-2 '(set! x)'
+test_fail set-fail-3 '(set! 1 1)'
+
+println
+test set-car-1 "(define x '(1 2)) (set-car! x 555) x" '(555 2)'
+test set-car-2 "(define x '(1 2)) (set-car! (cdr x) 555) x" '(1 555)'
+test set-car-3 "(define x '(1 . 2)) (set-car! x 555) x" '(555 . 2)'
+test set-car-4 "(define x '(1 . 2)) (set-car! x '(5 6 7)) x" '((5 6 7) . 2)'
+test_fail set-car-fail-1 '(set-car!)'
+test_fail set-car-fail-2 '(set-car! x)'
+test_fail set-car-fail-3 '(set-car! 1 1)'
+test_fail set-car-fail-4 '(define x 1) (set-car! x 5)'
+test_fail set-car-fail-5 "(define x '(1 . 2)) (set-car! (cdr x) 555)"
+test_fail set-car-fail-6 "(define x '(1)) (set-car! (cdr x) 555)"
+
+println
+test set-cdr-1 "(define x '(1 2)) (set-cdr! x 555) x" '(1 . 555)'
+test set-cdr-2 "(define x '(1 2)) (set-cdr! (cdr x) 555) x" '(1 2 . 555)'
+test set-cdr-3 "(define x '(1 2)) (set-cdr! (cdr x) '(555)) x" '(1 2 555)'
+test set-cdr-4 "(define x '(1 . 2)) (set-cdr! x 555) x" '(1 . 555)'
+test set-cdr-5 "(define x '(1 . 2)) (set-cdr! x '(555)) x" '(1 555)'
+test_fail set-cdr-fail-1 '(set-cdr!)'
+test_fail set-cdr-fail-2 '(set-cdr! x)'
+test_fail set-cdr-fail-3 '(set-cdr! 1 1)'
+test_fail set-cdr-fail-4 '(define x 1) (set-cdr! x 5)'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1
