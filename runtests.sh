@@ -93,7 +93,7 @@ test empty-list-2 "'(     )" '()'
 test list-1 "'(1 \"string\" #t)" '(1 "string" #t)'
 test list-2 "'(  1    \"string\"    #t  )" '(1 "string" #t)'
 test list-nested "'((123 \"string\") #f #t ())" '((123 "string") #f #t ())'
-test_fail empty_list_unquoted '()'
+test_fail empty-list-unquoted '()'
 test_fail list-unclosed-list '('
 test_fail list-unexpected-terminator ')'
 
@@ -311,11 +311,11 @@ test is-null-2 '(null? #t)' '#f'
 test is-null-3 "(null? (cdr '(1)))" '#t'
 
 println
-test is_pair-1 '(pair? #t)' '#f'
-test is_pair-2 "(pair? '())" '#f'
-test is_pair-3 "(pair? '(1))" '#t'
-test is_pair-4 "(pair? '(1 2))" '#t'
-test is_pair-5 "(pair? (list 1 2))" '#t'
+test is-pair-1 '(pair? #t)' '#f'
+test is-pair-2 "(pair? '())" '#f'
+test is-pair-3 "(pair? '(1))" '#t'
+test is-pair-4 "(pair? '(1 2))" '#t'
+test is-pair-5 "(pair? (list 1 2))" '#t'
 
 println
 test is-str-1 "(string? 'string)" '#f'
