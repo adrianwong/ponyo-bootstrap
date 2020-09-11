@@ -144,23 +144,23 @@ static Val* intern_symbol(char* str) {
 
 const char extended_symbols[] = "!$%&*+-./:<=>?@^_~";
 
-static Val* read_c(int c);
-static Val* read(void);
+static Val* read_c(FILE* fp, int c);
+static Val* read(FILE* fp);
 
-static int peek(void) {
-    int c = getchar();
-    ungetc(c, stdin);
+static int peek(FILE* fp) {
+    int c = getc(fp);
+    ungetc(c, fp);
     return c;
 }
 
-static int get_non_whitespace_char(void) {
+static int get_non_whitespace_char(FILE* fp) {
     for (;;) {
-        int c = getchar();
+        int c = getc(fp);
         if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
             continue;
         } else if (c == ';') {
             do {
-                c = getchar();
+                c = getc(fp);
             } while (c != '\n' && c != EOF);
         } else {
             return c;
@@ -169,8 +169,8 @@ static int get_non_whitespace_char(void) {
 }
 
 // Assumes a '#' has already been read.
-static Val* read_bool(void) {
-    int c = getchar();
+static Val* read_bool(FILE* fp) {
+    int c = getc(fp);
     switch (c) {
     case EOF:
         ERROR("invalid '#' prefix");
@@ -183,39 +183,39 @@ static Val* read_bool(void) {
     }
 }
 
-static int read_int(int num) {
-    while (isdigit(peek())) {
-        num = num * 10 + (getchar() - '0');
+static int read_int(FILE* fp, int num) {
+    while (isdigit(peek(fp))) {
+        num = num * 10 + (getc(fp) - '0');
     }
     return num;
 }
 
 // Assumes a '(' has already been read.
-static Val* read_list(int c) {
+static Val* read_list(FILE* fp, int c) {
     if (c == EOF) {
         ERROR("unterminated list");
     } else if (c == ')') {
         return EMPTY_LIST;
     }
     // NULL check unnecessary due to earlier EOF check.
-    Val* car = read_c(c);
+    Val* car = read_c(fp, c);
 
-    c = get_non_whitespace_char();
+    c = get_non_whitespace_char(fp);
     if (c == '.') {
         // NULL check unnecessary due to subsequent ')' check.
-        Val* cdr = read();
-        if (get_non_whitespace_char() != ')') {
+        Val* cdr = read(fp);
+        if (get_non_whitespace_char(fp) != ')') {
             ERROR("expected list terminator");
         }
         return cons(car, cdr);
     } else {
-        Val* cdr = read_list(c);
+        Val* cdr = read_list(fp, c);
         return cons(car, cdr);
     }
 }
 
-static Val* read_quote(void) {
-    Val* quote = read();
+static Val* read_quote(FILE* fp) {
+    Val* quote = read(fp);
     if (quote == NULL) {
         ERROR("unexpected EOF reading quote");
     }
@@ -223,14 +223,14 @@ static Val* read_quote(void) {
     return cons(sym, cons(quote, EMPTY_LIST));
 }
 
-static Val* read_string(void) {
+static Val* read_string(FILE* fp) {
     char buffer[STRING_MAX_LEN + 1];
     int i = 0;
-    for (int c = getchar(); c != '"'; c = getchar()) {
+    for (int c = getc(fp); c != '"'; c = getc(fp)) {
         if (c == EOF) {
             ERROR("unterminated string");
         } else if (c == '\\') {
-            c = getchar();
+            c = getc(fp);
             switch (c) {
             case 't':
                 c = '\t';
@@ -255,13 +255,13 @@ static Val* read_string(void) {
     return make_string_or_symbol(TY_STRING, buffer);
 }
 
-static Val* read_symbol(int c) {
+static Val* read_symbol(FILE* fp, int c) {
     char buffer[SYMBOL_MAX_LEN + 1];
     buffer[0] = c;
     int i = 1;
-    while (isalnum(peek()) || strchr(extended_symbols, peek())) {
+    while (isalnum(peek(fp)) || strchr(extended_symbols, peek(fp))) {
         if (i < SYMBOL_MAX_LEN) {
-            buffer[i++] = getchar();
+            buffer[i++] = getc(fp);
         } else {
             ERROR("identifier too long")
         }
@@ -270,37 +270,37 @@ static Val* read_symbol(int c) {
     return intern_symbol(buffer);
 }
 
-static Val* read_c(int c) {
+static Val* read_c(FILE* fp, int c) {
     if (c == EOF) {
         return NULL;
     }
     if (c == '#') {
-        return read_bool();
+        return read_bool(fp);
     }
     if (c == '"') {
-        return read_string();
+        return read_string(fp);
     }
     if (c == '(') {
-        return read_list(get_non_whitespace_char());
+        return read_list(fp, get_non_whitespace_char(fp));
     }
     if (c == '\'') {
-        return read_quote();
+        return read_quote(fp);
     }
     if (isdigit(c)) {
-        return make_int(read_int(c - '0'));
+        return make_int(read_int(fp, c - '0'));
     }
-    if (c == '-' && isdigit(peek())) {
-        return make_int(-read_int(getchar() - '0'));
+    if (c == '-' && isdigit(peek(fp))) {
+        return make_int(-read_int(fp, getc(fp) - '0'));
     }
     if (isalpha(c) || strchr(extended_symbols, c)) {
-        return read_symbol(c);
+        return read_symbol(fp, c);
     }
     ERROR("unexpected character '%c'", c);
 }
 
-static Val* read(void) {
-    int c = get_non_whitespace_char();
-    return read_c(c);
+static Val* read(FILE* fp) {
+    int c = get_non_whitespace_char(fp);
+    return read_c(fp, c);
 }
 
 /*------------------------------------------------------------------------------
@@ -988,7 +988,7 @@ int main(void) {
     global_env = extend_env(EMPTY_LIST, EMPTY_LIST, global_env);
     define_prim_procs(global_env);
     for (;;) {
-        Val* val = read();
+        Val* val = read(stdin);
         if (val != NULL) {
             val = eval(val, global_env);
             if (val != NULL) {
