@@ -359,6 +359,21 @@ test_fail set-cdr-fail-3 '(set-cdr! 1 1)'
 test_fail set-cdr-fail-4 '(define x 1) (set-cdr! x 5)'
 
 println
+test display-01 '(display #t)' '#t'
+test display-02 '(display #f)' '#f'
+test display-03 "(display '())" '()'
+test display-04 "(display '(1 2 3))" '(1 2 3)'
+test display-05 '(display 55)' '55'
+test display-06 '(display 55)(display 88)' '5588'
+test display-07 '(display "str!")' 'str!'
+test display-08 '(display "THIS.\nIS.\n\\"PONYO\\"!\n")' 'THIS.\nIS.\n"PONYO"!'
+test display-09 "(display 'sym)" 'sym'
+test display-10 '(display #t)' '#t'
+test display-11 '(display (if #t 12345))' '12345'
+test_fail display-fail-1 '(display)'
+test_fail display-fail-2 '(display 1 2)'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1

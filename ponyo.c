@@ -467,6 +467,7 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_IS_PAIR "pair?"
 #define PRIM_IS_STR  "string?"
 #define PRIM_IS_SYM  "symbol?"
+#define PRIM_DISPLAY "display"
 
 static char gt(int a, int b) { return a  > b ? 1 : 0; }
 static char eq(int a, int b) { return a == b ? 1 : 0; }
@@ -846,6 +847,19 @@ static Val* prim_is_sym(Val* args, Val* env) {
     return val->ty == TY_SYMBOL ? TRUE : FALSE;
 }
 
+static void print(Val* val);
+
+static Val* prim_display(Val* args, Val* env) {
+    check_len(PRIM_IS_SYM, args, eq, 1);
+    Val* val = eval(args->car, env);
+    if (val->ty == TY_STRING) {
+        printf("%s", val->str);
+    } else {
+        print(val);
+    }
+    return NULL;
+}
+
 static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_ADD, prim_add, env);
     add_prim_proc(PRIM_SUB, prim_sub, env);
@@ -883,13 +897,13 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_IS_PAIR, prim_is_pair, env);
     add_prim_proc(PRIM_IS_STR, prim_is_str, env);
     add_prim_proc(PRIM_IS_SYM, prim_is_sym, env);
+
+    add_prim_proc(PRIM_DISPLAY, prim_display, env);
 }
 
 /*------------------------------------------------------------------------------
  | PRINTER
  -----------------------------------------------------------------------------*/
-
-static void print(Val* val);
 
 static void print_list(Val* list) {
     printf("(");
