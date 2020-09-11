@@ -465,6 +465,7 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_IS_INT  "integer?"
 #define PRIM_IS_NULL "null?"
 #define PRIM_IS_PAIR "pair?"
+#define PRIM_IS_PROC "procedure?"
 #define PRIM_IS_STR  "string?"
 #define PRIM_IS_SYM  "symbol?"
 #define PRIM_DISPLAY "display"
@@ -836,6 +837,12 @@ static Val* prim_is_pair(Val* args, Val* env) {
     return val->ty == TY_PAIR ? TRUE : FALSE;
 }
 
+static Val* prim_is_proc(Val* args, Val* env) {
+    check_len(PRIM_IS_PROC, args, eq, 1);
+    Val* val = eval(args->car, env);
+    return val->ty == TY_COMP_PROC || val->ty == TY_PRIM_PROC ? TRUE : FALSE;
+}
+
 static Val* prim_is_str(Val* args, Val* env) {
     check_len(PRIM_IS_STR, args, eq, 1);
     Val* val = eval(args->car, env);
@@ -912,6 +919,7 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_IS_INT, prim_is_int, env);
     add_prim_proc(PRIM_IS_NULL, prim_is_null, env);
     add_prim_proc(PRIM_IS_PAIR, prim_is_pair, env);
+    add_prim_proc(PRIM_IS_PROC, prim_is_proc, env);
     add_prim_proc(PRIM_IS_STR, prim_is_str, env);
     add_prim_proc(PRIM_IS_SYM, prim_is_sym, env);
 

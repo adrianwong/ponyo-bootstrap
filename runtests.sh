@@ -318,6 +318,12 @@ test is-pair-4 "(pair? '(1 2))" '#t'
 test is-pair-5 "(pair? (list 1 2))" '#t'
 
 println
+test is-proc-1 '(procedure? car)' '#t'
+test is-proc-2 "(procedure? 'car)" '#f'
+test is-proc-3 '(procedure? (lambda (x) (* x x)))' '#t'
+test is-proc-4 "(procedure? '(lambda (x) (* x x)))" '#f'
+
+println
 test is-str-1 "(string? 'string)" '#f'
 test is-str-2 '(string? "123")' '#t'
 test is-str-3 '(string? "")' '#t'
