@@ -468,6 +468,7 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_IS_STR  "string?"
 #define PRIM_IS_SYM  "symbol?"
 #define PRIM_DISPLAY "display"
+#define PRIM_LOAD    "load"
 
 static char gt(int a, int b) { return a  > b ? 1 : 0; }
 static char eq(int a, int b) { return a == b ? 1 : 0; }
@@ -860,6 +861,22 @@ static Val* prim_display(Val* args, Val* env) {
     return NULL;
 }
 
+static void load(FILE* fp, char print_vals, Val* env);
+
+static Val* prim_load(Val* args, Val* env) {
+    check_len(PRIM_LOAD, args, eq, 1);
+    check_typ(PRIM_LOAD, args->car, TY_STRING);
+    char* path = args->car->str;
+
+    FILE* fp = fopen(path, "r");
+    if (fp == NULL) {
+        ERROR("could not load '%s'", path);
+    }
+    load(fp, 0, env);
+    fclose(fp);
+    return NULL;
+}
+
 static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_ADD, prim_add, env);
     add_prim_proc(PRIM_SUB, prim_sub, env);
@@ -899,6 +916,7 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_IS_SYM, prim_is_sym, env);
 
     add_prim_proc(PRIM_DISPLAY, prim_display, env);
+    add_prim_proc(PRIM_LOAD, prim_load, env);
 }
 
 /*------------------------------------------------------------------------------
@@ -982,21 +1000,23 @@ static void print(Val* val) {
  | PONYO!
  -----------------------------------------------------------------------------*/
 
+static void load(FILE* fp, char print_vals, Val* env) {
+    for (Val* val = read(fp); val != NULL; val = read(fp)) {
+        val = eval(val, env);
+        if (val != NULL && print_vals) {
+            print(val);
+            printf("\n");
+        }
+    }
+}
+
 int main(void) {
     symbol_list = EMPTY_LIST;
     global_env = EMPTY_LIST;
     global_env = extend_env(EMPTY_LIST, EMPTY_LIST, global_env);
+
     define_prim_procs(global_env);
-    for (;;) {
-        Val* val = read(stdin);
-        if (val != NULL) {
-            val = eval(val, global_env);
-            if (val != NULL) {
-                print(val);
-                printf("\n");
-            }
-        } else {
-            return 0;
-        }
-    }
+    load(stdin, 1, global_env);
+
+    return 0;
 }
