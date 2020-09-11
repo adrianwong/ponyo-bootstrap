@@ -19,15 +19,15 @@
  -----------------------------------------------------------------------------*/
 
 typedef enum Type {
-    TY_FALSE = 0,
-    TY_TRUE = 1,
-    TY_EMPTY_LIST,
-    TY_COMP_PROC,
-    TY_INT,
-    TY_PAIR,
-    TY_PRIM_PROC,
-    TY_STRING,
-    TY_SYMBOL,
+    TY_FALSE      = 1 << 0,
+    TY_TRUE       = 1 << 1,
+    TY_EMPTY_LIST = 1 << 2,
+    TY_COMP_PROC  = 1 << 3,
+    TY_INT        = 1 << 4,
+    TY_PAIR       = 1 << 5,
+    TY_PRIM_PROC  = 1 << 6,
+    TY_STRING     = 1 << 7,
+    TY_SYMBOL     = 1 << 8,
 } Type;
 
 typedef struct Val Val;
@@ -463,6 +463,7 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_SET_CAR "set-car!"
 #define PRIM_SET_CDR "set-cdr!"
 #define PRIM_IS_INT  "integer?"
+#define PRIM_IS_LIST "list?"
 #define PRIM_IS_NULL "null?"
 #define PRIM_IS_PAIR "pair?"
 #define PRIM_IS_PROC "procedure?"
@@ -819,40 +820,40 @@ static void add_prim_proc(char* name, PrimProc* p, Val* env) {
     define_variable(sym, proc, env);
 }
 
-static Val* prim_is_int(Val* args, Val* env) {
-    check_len(PRIM_IS_INT, args, eq, 1);
+static Val* prim_is_type(Val* args, Val* env, char* proc, Type ty) {
+    check_len(proc, args, eq, 1);
     Val* val = eval(args->car, env);
-    return val->ty == TY_INT ? TRUE : FALSE;
+    return val->ty & ty ? TRUE : FALSE;
+}
+
+static Val* prim_is_int(Val* args, Val* env) {
+    return prim_is_type(args, env, PRIM_IS_INT, TY_INT);
+}
+
+static Val* prim_is_list(Val* args, Val* env) {
+    check_len(PRIM_IS_LIST, args, eq, 1);
+    Val* val = eval(args->car, env);
+    return len(val) < 0 ? FALSE : TRUE;
 }
 
 static Val* prim_is_null(Val* args, Val* env) {
-    check_len(PRIM_IS_NULL, args, eq, 1);
-    Val* val = eval(args->car, env);
-    return val->ty == TY_EMPTY_LIST ? TRUE : FALSE;
+    return prim_is_type(args, env, PRIM_IS_NULL, TY_EMPTY_LIST);
 }
 
 static Val* prim_is_pair(Val* args, Val* env) {
-    check_len(PRIM_IS_PAIR, args, eq, 1);
-    Val* val = eval(args->car, env);
-    return val->ty == TY_PAIR ? TRUE : FALSE;
+    return prim_is_type(args, env, PRIM_IS_PAIR, TY_PAIR);
 }
 
 static Val* prim_is_proc(Val* args, Val* env) {
-    check_len(PRIM_IS_PROC, args, eq, 1);
-    Val* val = eval(args->car, env);
-    return val->ty == TY_COMP_PROC || val->ty == TY_PRIM_PROC ? TRUE : FALSE;
+    return prim_is_type(args, env, PRIM_IS_PROC, TY_COMP_PROC | TY_PRIM_PROC);
 }
 
 static Val* prim_is_str(Val* args, Val* env) {
-    check_len(PRIM_IS_STR, args, eq, 1);
-    Val* val = eval(args->car, env);
-    return val->ty == TY_STRING ? TRUE : FALSE;
+    return prim_is_type(args, env, PRIM_IS_STR, TY_STRING);
 }
 
 static Val* prim_is_sym(Val* args, Val* env) {
-    check_len(PRIM_IS_SYM, args, eq, 1);
-    Val* val = eval(args->car, env);
-    return val->ty == TY_SYMBOL ? TRUE : FALSE;
+    return prim_is_type(args, env, PRIM_IS_SYM, TY_SYMBOL);
 }
 
 static void print(Val* val);
@@ -917,6 +918,7 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_SET_CDR, prim_set_cdr, env);
 
     add_prim_proc(PRIM_IS_INT, prim_is_int, env);
+    add_prim_proc(PRIM_IS_LIST, prim_is_list, env);
     add_prim_proc(PRIM_IS_NULL, prim_is_null, env);
     add_prim_proc(PRIM_IS_PAIR, prim_is_pair, env);
     add_prim_proc(PRIM_IS_PROC, prim_is_proc, env);

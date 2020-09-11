@@ -306,6 +306,11 @@ test is-int-2 '(integer? 123)' '#t'
 test is-int-3 "(integer? (car '(1)))" '#t'
 
 println
+test is_list-1 "(list? '(a b c))" '#t'
+test is_list-2 "(list? '())" '#t'
+test is_list-3 "(list? '(a . b))" '#f'
+
+println
 test is-null-1 "(null? '())" '#t'
 test is-null-2 '(null? #t)' '#f'
 test is-null-3 "(null? (cdr '(1)))" '#t'
