@@ -741,7 +741,7 @@ static Val* prim_define(Val* args, Val* env) {
 }
 
 static Val* prim_lambda(Val* args, Val* env) {
-    check_len(PRIM_DEFINE, args, gt, 1);
+    check_len(PRIM_LAMBDA, args, gt, 1);
     Val* params = args->car;
     for (Val* p = params; p != EMPTY_LIST; p = p->cdr) {
         check_typ(PRIM_LAMBDA, p->car, TY_SYMBOL);
@@ -850,7 +850,7 @@ static Val* prim_is_sym(Val* args, Val* env) {
 static void print(Val* val);
 
 static Val* prim_display(Val* args, Val* env) {
-    check_len(PRIM_IS_SYM, args, eq, 1);
+    check_len(PRIM_DISPLAY, args, eq, 1);
     Val* val = eval(args->car, env);
     if (val->ty == TY_STRING) {
         printf("%s", val->str);
