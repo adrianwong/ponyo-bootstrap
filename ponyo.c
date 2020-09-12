@@ -385,20 +385,36 @@ static Val* apply(Val* proc, Val* args, Val* env) {
         return proc->proc(args, env);
     } else if (proc->ty == TY_COMP_PROC) {
         Val* params = proc->params;
-        if (len(params) != len(args)) {
-            ERROR("incorrect number of arguments to procedure");
-        }
+        Val* vars = EMPTY_LIST;
+        Val* vals = EMPTY_LIST;
 
         // Extend the base environment carried by the procedure to include a
         // frame that binds the parameters of the procedure to the arguments
         // to which the procedure is to be applied.
-        Val* vars = proc->params;
-        Val* vals = EMPTY_LIST;
-        for (; args != EMPTY_LIST; args = args->cdr) {
+        for (; params->ty == TY_PAIR; args = args->cdr, params = params->cdr) {
+            if (args == EMPTY_LIST) {
+                ERROR("too few arguments to procedure");
+            }
+            vars = cons(params->car, vars);
             vals = cons(eval(args->car, env), vals);
         }
-        Val* penv = extend_env(vars, rev(vals), proc->env);
+        if (params != EMPTY_LIST) {
+            vars = cons(params, vars);
+            vars = rev(vars);
 
+            Val* varargs = EMPTY_LIST;
+            for (; args != EMPTY_LIST; args = args->cdr) {
+                varargs = cons(eval(args->car, env), varargs);
+            }
+            vals = cons(rev(varargs), vals);
+            vals = rev(vals);
+        } else {
+            if (args != EMPTY_LIST) {
+                ERROR("too many arguments to procedure");
+            }
+        }
+
+        Val* penv = extend_env(vars, vals, proc->env);
         // Evaluate the expressions in the procedure body, returning the
         // result of the final expression.
         Val* result;
@@ -717,13 +733,22 @@ static Val* prim_not(Val* args, Val* env) {
     }
 }
 
-static Val* prim_define_proc(Val* args, Val* env) {
+static void define_proc(Val* args, Val* env) {
+    Val* name = args->car->car;
     Val* params = args->car->cdr;
-    for (Val* p = params; p != EMPTY_LIST; p = p->cdr) {
+    Val* body = args->cdr;
+
+    check_typ(PRIM_DEFINE, name, TY_SYMBOL);
+    Val* p = params;
+    for (; p->ty == TY_PAIR; p = p->cdr) {
         check_typ(PRIM_DEFINE, p->car, TY_SYMBOL);
     }
-    Val* body = args->cdr;
-    return make_comp_proc(params, body, env);
+    if (p != EMPTY_LIST) {
+        check_typ(PRIM_DEFINE, p, TY_SYMBOL);
+    }
+
+    Val* proc = make_comp_proc(params, body, env);
+    define_variable(name, proc, env);
 }
 
 static Val* prim_define(Val* args, Val* env) {
@@ -734,9 +759,7 @@ static Val* prim_define(Val* args, Val* env) {
         Val* val = eval(args->cdr->car, env);
         define_variable(var, val, env);
     } else if (var->ty == TY_PAIR) {
-        var = var->car;
-        Val* val = prim_define_proc(args, env);
-        define_variable(var, val, env);
+        define_proc(args, env);
     } else {
         ERROR("%s: argument is not a symbol or a pair", PRIM_DEFINE);
     }

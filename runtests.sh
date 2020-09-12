@@ -274,6 +274,28 @@ test proc-5 '(define (g n)
     (define (f n a) (if (= n 0) a (f (- n 1) (* n a)))) (f n 1))
     (g 6)' '720'
 test proc-6 '(define (square) (define (f n) (* n n)) f) ((square) 15)' '225'
+test_fail proc-fail-1 '(define (f x y) 555) (f)'
+test_fail proc-fail-2 '(define (f x y) 555) (f 1)'
+test_fail proc-fail-3 '(define (f x y) 555) (f 1 2 3)'
+test_fail proc-fail-4 '(define (#t x y) 555)'
+test_fail proc-fail-5 '(define (f #t y) 555)'
+test_fail proc-fail-6 '(define (f x #t) 555)'
+
+println
+test proc-varargs-1 '(define (f . args) args) (f)' '()'
+test proc-varargs-2 '(define (f . args) args) (f 1)' '(1)'
+test proc-varargs-3 '(define (f . args) args) (f 1 2)' '(1 2)'
+
+test proc-varargs-4 '(define (f x . args)
+    (display x) (display args)) (f 1)' '1()'
+test proc-varargs-5 '(define (f x . args)
+    (display x) (display args)) (f 1 2)' '1(2)'
+test proc-varargs-6 '(define (f x . args)
+    (display x) (display args)) (f 1 2 3)' '1(2 3)'
+
+test_fail proc-varargs-fail-1 '(define (f x . args) 1) (f)'
+test_fail proc-varargs-fail-2 '(define (f x y . args) 1) (f)'
+test_fail proc-varargs-fail-3 '(define (f x y . args) 1) (f 1)'
 
 println
 test listproc-1 '(list)' '()'
