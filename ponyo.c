@@ -747,9 +747,15 @@ static Val* prim_define(Val* args, Val* env) {
 static Val* prim_lambda(Val* args, Val* env) {
     check_len(PRIM_LAMBDA, args, gt, 1);
     Val* params = args->car;
-    for (Val* p = params; p != EMPTY_LIST; p = p->cdr) {
+
+    Val* p = params;
+    for (; p->ty == TY_PAIR; p = p->cdr) {
         check_typ(PRIM_LAMBDA, p->car, TY_SYMBOL);
     }
+    if (p != EMPTY_LIST) {
+        check_typ(PRIM_LAMBDA, p, TY_SYMBOL);
+    }
+
     Val* body = args->cdr;
     return make_comp_proc(params, body, env);
 }
