@@ -507,29 +507,8 @@ static void check_len(char* proc, Val* args, char (*op)(int, int), int exp) {
 // Yes, "typ" without the "e" so the function name has the same number of
 // characters as `check_len`. Fight me.
 static void check_typ(char* proc, Val* arg, Type exp) {
-    if (arg->ty != exp) {
-        char* ty;
-        switch (exp) {
-        case TY_FALSE:
-        case TY_TRUE:
-            ty = "boolean";
-            break;
-        case TY_INT:
-            ty = "number";
-            break;
-        case TY_PAIR:
-            ty = "pair";
-            break;
-        case TY_STRING:
-            ty = "string";
-            break;
-        case TY_SYMBOL:
-            ty = "symbol";
-            break;
-        default:
-            ERROR("argument is not of the expected type");
-        }
-        ERROR("%s: argument is not a %s", proc, ty);
+    if (!(arg->ty & exp)) {
+        ERROR("%s: incorrect argument type", proc);
     }
 }
 
