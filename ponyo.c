@@ -489,6 +489,7 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_IS_SYM  "symbol?"
 #define PRIM_DISPLAY "display"
 #define PRIM_LOAD    "load"
+#define PRIM_READ    "read"
 
 static char  lt(int a, int b) { return a  < b; }
 static char lte(int a, int b) { return a <= b; }
@@ -905,6 +906,12 @@ static Val* prim_load(Val* args, Val* env) {
     return NULL;
 }
 
+// TODO Support input ports.
+static Val* prim_read(Val* args, Val* env) {
+    check_len(PRIM_READ, args, eq, 0);
+    return read(stdin);
+}
+
 static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_ADD, prim_add, env);
     add_prim_proc(PRIM_SUB, prim_sub, env);
@@ -948,7 +955,9 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_IS_SYM, prim_is_sym, env);
 
     add_prim_proc(PRIM_DISPLAY, prim_display, env);
+
     add_prim_proc(PRIM_LOAD, prim_load, env);
+    add_prim_proc(PRIM_READ, prim_read, env);
 }
 
 /*------------------------------------------------------------------------------
