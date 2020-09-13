@@ -490,6 +490,7 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_DISPLAY "display"
 #define PRIM_LOAD    "load"
 #define PRIM_READ    "read"
+#define PRIM_APPLY   "apply"
 
 static char  lt(int a, int b) { return a  < b; }
 static char lte(int a, int b) { return a <= b; }
@@ -891,6 +892,24 @@ static Val* prim_read(Val* args, Val* env) {
     return read(stdin);
 }
 
+static Val* collect_operands(Val* args, Val* env) {
+    if (args->cdr == EMPTY_LIST) {
+        Val* list = eval(args->car, env);
+        check_typ(PRIM_APPLY, list, TY_EMPTY_LIST | TY_PAIR);
+        return list;
+    } else {
+        return cons(eval(args->car, env), collect_operands(args->cdr, env));
+    }
+}
+
+static Val* prim_apply(Val* args, Val* env) {
+    check_len(PRIM_APPLY, args, gt, 1);
+    Val* proc = eval(args->car, env);
+    check_typ(PRIM_APPLY, proc, TY_COMP_PROC | TY_PRIM_PROC);
+    Val* operands = collect_operands(args->cdr, env);
+    return eval(cons(proc, operands), env);
+}
+
 static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_ADD, prim_add, env);
     add_prim_proc(PRIM_SUB, prim_sub, env);
@@ -937,6 +956,8 @@ static void define_prim_procs(Val* env) {
 
     add_prim_proc(PRIM_LOAD, prim_load, env);
     add_prim_proc(PRIM_READ, prim_read, env);
+
+    add_prim_proc(PRIM_APPLY, prim_apply, env);
 }
 
 /*------------------------------------------------------------------------------

@@ -428,6 +428,22 @@ test_fail display-fail-1 '(display)'
 test_fail display-fail-2 '(display 1 2)'
 
 println
+test apply-1 "(apply + '())" '0'
+test apply-2 "(apply + 1 2 '(3 4 5))" '15'
+test apply-3 "(define (test . ns)
+                (define (iter ns res)
+                  (if (null? ns)
+                      res
+                      (iter (cdr ns) (+ res (* (car ns) (car ns))))))
+              (iter ns 0))
+              (apply test 1 2 3 4 '(5))" '55'
+test_fail apply-fail-1 "(apply)"
+test_fail apply-fail-2 "(apply 1)"
+test_fail apply-fail-3 "(apply 1 2)"
+test_fail apply-fail-4 "(apply + 1)"
+test_fail apply-fail-5 "(apply + 1 2)"
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1
