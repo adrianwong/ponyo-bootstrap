@@ -171,7 +171,17 @@ test lt-2 '(< 1 2)' '#t'
 test lt-3 '(< 2 2)' '#f'
 test lt-4 '(< 1 2 3)' '#t'
 test lt-5 '(< 2 1 2)' '#f'
+test lt-6 '(< 1 2 1 2)' '#f'
 test_fail lt-fail-1 '(<)'
+
+println
+test lte-1 '(<= 2)' '#t'
+test lte-2 '(<= 1 2)' '#t'
+test lte-3 '(<= 2 2)' '#t'
+test lte-4 '(<= 1 2 2)' '#t'
+test lte-5 '(<= 2 2 1)' '#f'
+test lte-6 '(<= 2 2 1 2)' '#f'
+test_fail lte-fail-1 '(<=)'
 
 println
 test gt-1 '(> 2)' '#t'
@@ -179,7 +189,17 @@ test gt-2 '(> 1 2)' '#f'
 test gt-3 '(> 2 2)' '#f'
 test gt-4 '(> 2 1 3)' '#f'
 test gt-5 '(> 3 2 1)' '#t'
+test gt-6 '(> 2 1 2 1)' '#f'
 test_fail gt-fail-1 '(>)'
+
+println
+test gte-1 '(>= 2)' '#t'
+test gte-2 '(>= 1 2)' '#f'
+test gte-3 '(>= 2 2)' '#t'
+test gte-4 '(>= 2 1 2)' '#f'
+test gte-5 '(>= 3 2 2)' '#t'
+test gte-6 '(>= 2 1 2 2)' '#f'
+test_fail gte-fail-1 '(>=)'
 
 println
 test num-eq-1 '(= 2)' '#t'
@@ -188,6 +208,7 @@ test num-eq-3 '(= 2 2)' '#t'
 test num-eq-4 '(= 2 1 3)' '#f'
 test num-eq-5 '(= 3 2 1)' '#f'
 test num-eq-6 '(= 2 2 2)' '#t'
+test num-eq-7 '(= 2 2 1 1)' '#f'
 test_fail num-eq-fail-1 '(=)'
 
 println

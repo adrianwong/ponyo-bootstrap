@@ -459,7 +459,9 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_DIV     "/"
 #define PRIM_ABS     "abs"
 #define PRIM_LT      "<"
+#define PRIM_LTE     "<="
 #define PRIM_GT      ">"
+#define PRIM_GTE     ">="
 #define PRIM_NUM_EQ  "="
 #define PRIM_EQ      "eq?"
 #define PRIM_CAR     "car"
@@ -488,8 +490,13 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_DISPLAY "display"
 #define PRIM_LOAD    "load"
 
-static char gt(int a, int b) { return a  > b ? 1 : 0; }
-static char eq(int a, int b) { return a == b ? 1 : 0; }
+static char  lt(int a, int b) { return a  < b; }
+static char lte(int a, int b) { return a <= b; }
+static char  gt(int a, int b) { return a  > b; }
+static char gte(int a, int b) { return a >= b; }
+static char  eq(int a, int b) { return a == b; }
+static char neq(int a, int b) { return a != b; }
+
 static void check_len(char* proc, Val* args, char (*op)(int, int), int exp) {
     if (!op(len(args), exp)) {
         ERROR("%s: incorrect argument count", proc);
@@ -585,49 +592,39 @@ static Val* prim_abs(Val* args, Val* env) {
     return num->num < 0 ? make_int(-num->num) : make_int(num->num);
 }
 
-static Val* prim_lt(Val* args, Val* env) {
-    check_len(PRIM_LT, args, gt, 0);
+static Val* compare(char* proc, Val* args, Val* env, char (*op)(int, int)) {
+    check_len(proc, args, gt, 0);
     Val* prev = eval(args->car, env);
-    check_typ(PRIM_LT, prev, TY_INT);
+    check_typ(proc, prev, TY_INT);
     for (args = args->cdr; args != EMPTY_LIST; args = args->cdr) {
         Val* curr = eval(args->car, env);
-        check_typ(PRIM_LT, curr, TY_INT);
-        if (prev->num >= curr->num) {
+        check_typ(proc, curr, TY_INT);
+        if (op(prev->num, curr->num)) {
             return FALSE;
         }
         prev = curr;
     }
     return TRUE;
+}
+
+static Val* prim_lt(Val* args, Val* env) {
+    return compare(PRIM_LT, args, env, gte);
+}
+
+static Val* prim_lte(Val* args, Val* env) {
+    return compare(PRIM_LTE, args, env, gt);
 }
 
 static Val* prim_gt(Val* args, Val* env) {
-    check_len(PRIM_GT, args, gt, 0);
-    Val* prev = eval(args->car, env);
-    check_typ(PRIM_GT, prev, TY_INT);
-    for (args = args->cdr; args != EMPTY_LIST; args = args->cdr) {
-        Val* curr = eval(args->car, env);
-        check_typ(PRIM_GT, curr, TY_INT);
-        if (prev->num <= curr->num) {
-            return FALSE;
-        }
-        prev = curr;
-    }
-    return TRUE;
+    return compare(PRIM_GT, args, env, lte);
+}
+
+static Val* prim_gte(Val* args, Val* env) {
+    return compare(PRIM_GTE, args, env, lt);
 }
 
 static Val* prim_num_eq(Val* args, Val* env) {
-    check_len(PRIM_NUM_EQ, args, gt, 0);
-    Val* prev = eval(args->car, env);
-    check_typ(PRIM_NUM_EQ, prev, TY_INT);
-    for (args = args->cdr; args != EMPTY_LIST; args = args->cdr) {
-        Val* curr = eval(args->car, env);
-        check_typ(PRIM_NUM_EQ, curr, TY_INT);
-        if (prev->num != curr->num) {
-            return FALSE;
-        }
-        prev = curr;
-    }
-    return TRUE;
+    return compare(PRIM_NUM_EQ, args, env, neq);
 }
 
 static Val* prim_eq(Val* args, Val* env) {
@@ -916,7 +913,9 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_ABS, prim_abs, env);
 
     add_prim_proc(PRIM_LT, prim_lt, env);
+    add_prim_proc(PRIM_LTE, prim_lte, env);
     add_prim_proc(PRIM_GT, prim_gt, env);
+    add_prim_proc(PRIM_GTE, prim_gte, env);
     add_prim_proc(PRIM_NUM_EQ, prim_num_eq, env);
     add_prim_proc(PRIM_EQ, prim_eq, env);
 
