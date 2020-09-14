@@ -18,6 +18,8 @@
 (define (not x)
   (if x #f #t))
 
+(define (boolean? x) (or (eq? x #t) (eq? x #f)))
+
 ;;;-----------------------------------------------------------------------------
 ;;; PAIRS AND LISTS
 ;;;-----------------------------------------------------------------------------
@@ -50,6 +52,10 @@
 (define (cddadr x) (cdr (cdr (car (cdr x)))))
 (define (cdddar x) (cdr (cdr (cdr (car x)))))
 (define (cddddr x) (cdr (cdr (cdr (cdr x)))))
+
+(define (null? x) (eq? x '()))
+
+(define list (lambda x x))
 
 (define (length list)
   (define (iter list count)

@@ -488,14 +488,12 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_DEFINE  "define"
 #define PRIM_LAMBDA  "lambda"
 #define PRIM_LET     "let"
-#define PRIM_LIST    "list"
 #define PRIM_QUOTE   "quote"
 #define PRIM_SET     "set!"
 #define PRIM_SET_CAR "set-car!"
 #define PRIM_SET_CDR "set-cdr!"
 #define PRIM_IS_INT  "integer?"
 #define PRIM_IS_LIST "list?"
-#define PRIM_IS_NULL "null?"
 #define PRIM_IS_PAIR "pair?"
 #define PRIM_IS_PROC "procedure?"
 #define PRIM_IS_STR  "string?"
@@ -777,14 +775,6 @@ static Val* prim_let(Val* args, Val* env) {
     return eval(cons(lambda, vals), env);
 }
 
-static Val* prim_list(Val* args, Val* env) {
-    Val* list = EMPTY_LIST;
-    for (; args != EMPTY_LIST; args = args->cdr) {
-        list = cons(eval(args->car, env), list);
-    }
-    return rev(list);
-}
-
 static Val* prim_quote(Val* args, Val* env) {
     check_len(PRIM_QUOTE, args, eq, 1);
     return args->car;
@@ -837,10 +827,6 @@ static Val* prim_is_list(Val* args, Val* env) {
     check_len(PRIM_IS_LIST, args, eq, 1);
     Val* val = eval(args->car, env);
     return len(val) < 0 ? FALSE : TRUE;
-}
-
-static Val* prim_is_null(Val* args, Val* env) {
-    return prim_is_type(args, env, PRIM_IS_NULL, TY_EMPTY_LIST);
 }
 
 static Val* prim_is_pair(Val* args, Val* env) {
@@ -930,7 +916,6 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_DEFINE, prim_define, env);
     add_prim_proc(PRIM_LAMBDA, prim_lambda, env);
     add_prim_proc(PRIM_LET, prim_let, env);
-    add_prim_proc(PRIM_LIST, prim_list, env);
     add_prim_proc(PRIM_QUOTE, prim_quote, env);
 
     add_prim_proc(PRIM_SET, prim_set, env);
@@ -939,7 +924,6 @@ static void define_prim_procs(Val* env) {
 
     add_prim_proc(PRIM_IS_INT, prim_is_int, env);
     add_prim_proc(PRIM_IS_LIST, prim_is_list, env);
-    add_prim_proc(PRIM_IS_NULL, prim_is_null, env);
     add_prim_proc(PRIM_IS_PAIR, prim_is_pair, env);
     add_prim_proc(PRIM_IS_PROC, prim_is_proc, env);
     add_prim_proc(PRIM_IS_STR, prim_is_str, env);
