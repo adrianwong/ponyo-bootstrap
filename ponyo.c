@@ -374,6 +374,21 @@ static void define_variable(Val* var, Val* val, Val* env) {
     add_binding(var, val, first_frame);
 }
 
+static void set_variable(Val* var, Val* val, Val* env) {
+    for (; env != EMPTY_LIST; env = env->cdr) {
+        Val* frame = env->car;
+        Val* vars = frame->car;
+        Val* vals = frame->cdr;
+        for (; vars != EMPTY_LIST; vars = vars->cdr, vals = vals->cdr) {
+            if (var == vars->car) {
+                vals->car = val;
+                return;
+            }
+        }
+    }
+    ERROR("unbound variable: %s", var->str);
+}
+
 /*------------------------------------------------------------------------------
  | EVALUATOR
  -----------------------------------------------------------------------------*/
@@ -799,7 +814,7 @@ static Val* prim_set(Val* args, Val* env) {
     Val* var = args->car;
     check_typ(PRIM_SET, var, TY_SYMBOL);
     Val* val = eval(args->cdr->car, env);
-    define_variable(var, val, env);
+    set_variable(var, val, env);
     return NULL;
 }
 
