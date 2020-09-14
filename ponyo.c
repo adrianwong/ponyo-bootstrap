@@ -872,19 +872,12 @@ static Val* prim_display(Val* args, Val* env) {
     return NULL;
 }
 
-static void load(FILE* fp, char print_vals, Val* env);
+static void load_file(char* path, char print_vals, Val* env);
 
 static Val* prim_load(Val* args, Val* env) {
     check_len(PRIM_LOAD, args, eq, 1);
     check_typ(PRIM_LOAD, args->car, TY_STRING);
-    char* path = args->car->str;
-
-    FILE* fp = fopen(path, "r");
-    if (fp == NULL) {
-        ERROR("could not load '%s'", path);
-    }
-    load(fp, 0, env);
-    fclose(fp);
+    load_file(args->car->str, 0, env);
     return NULL;
 }
 
@@ -1051,12 +1044,22 @@ static void load(FILE* fp, char print_vals, Val* env) {
     }
 }
 
+static void load_file(char* path, char print_vals, Val* env) {
+    FILE* fp = fopen(path, "r");
+    if (fp == NULL) {
+        ERROR("could not load '%s'", path);
+    }
+    load(fp, print_vals, env);
+    fclose(fp);
+}
+
 int main(void) {
     symbol_list = EMPTY_LIST;
     global_env = EMPTY_LIST;
     global_env = extend_env(EMPTY_LIST, EMPTY_LIST, global_env);
 
     define_prim_procs(global_env);
+    load_file("stdlib.scm", 0, global_env); // Load `stdlib.scm` by default.
     load(stdin, 1, global_env);
 
     return 0;
