@@ -445,6 +445,47 @@ test_fail apply-fail-4 "(apply + 1)"
 test_fail apply-fail-5 "(apply + 1 2)"
 
 println
+test length-1 "(length '(a b c))" '3'
+test length-2 "(length '(a (b) (c d e)))" '3'
+test length-3 "(length '())" '0'
+test_fail length-fail-1 "(length '(a . b))"
+test_fail length-fail-2 "(length 'a)"
+
+println
+test append-1 "(append '() '())" '()'
+test append-2 "(append '(x) '(y))" '(x y)'
+test append-3 "(append '(a) '(b c d))" '(a b c d)'
+test append-4 "(append '(a (b)) '((c)))" '(a (b) (c))'
+test append-5 "(append '(x) '(y) '(z))" '(x y z)'
+test append-6 '(append)' '()'
+test append-7 '(append 1)' '1'
+test append-8 "(append '(1))" '(1)'
+
+println
+test reverse-1 "(reverse '(a b c))" '(c b a)'
+test reverse-2 "(reverse '(a (b c) d (e (f))))" '((e (f)) d (b c) a)'
+test reverse-3 "(reverse '())" '()'
+test_fail reverse-fail-1 "(reverse '(a . b))"
+test_fail reverse-fail-2 "(reverse 'a)"
+
+println
+test memq-1 "(memq 'a '(a b c))" '(a b c)'
+test memq-2 "(memq 'b '(a b c))" '(b c)'
+test memq-3 "(memq 'a '(b c d))" '#f'
+test memq-4 "(memq (list 'a) '(b (a) c))" '#f'
+test memq-5 "(memq 101 '(100 101 102))" '(101 102)'
+
+println
+test map-1 "(map cadr '((a b) (d e) (g h)))" '(b e h)'
+test map-2 "(map (lambda (n) (* n n)) '(1 2 3 4 5))" '(1 4 9 16 25)'
+test map-3 "(map + '(1 2 3) '(4 5 6))" '(5 7 9)'
+test map-4 "(let ((count 0))
+              (map (lambda (ignored)
+                     (set! count (+ count 1))
+                     count)
+                   '(a b)))" '(1 2)'
+
+println
 if [ "$errors" -gt 0 ]; then
     println_red "test result: $errors failed"
     exit 1

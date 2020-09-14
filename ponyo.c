@@ -472,7 +472,6 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_SUB     "-"
 #define PRIM_MUL     "*"
 #define PRIM_DIV     "/"
-#define PRIM_ABS     "abs"
 #define PRIM_LT      "<"
 #define PRIM_LTE     "<="
 #define PRIM_GT      ">"
@@ -486,7 +485,6 @@ static Val* eval(Val* val, Val* env) {
 #define PRIM_IF      "if"
 #define PRIM_AND     "and"
 #define PRIM_OR      "or"
-#define PRIM_NOT     "not"
 #define PRIM_DEFINE  "define"
 #define PRIM_LAMBDA  "lambda"
 #define PRIM_LET     "let"
@@ -579,13 +577,6 @@ static Val* prim_div(Val* args, Val* env) {
         sum /= num->num;
     }
     return make_int(sum);
-}
-
-static Val* prim_abs(Val* args, Val* env) {
-    check_len(PRIM_ABS, args, eq, 1);
-    Val* num = eval(args->car, env);
-    check_typ(PRIM_ABS, num, TY_INT);
-    return num->num < 0 ? make_int(-num->num) : make_int(num->num);
 }
 
 static Val* compare(char* proc, Val* args, Val* env, char (*op)(int, int)) {
@@ -714,16 +705,6 @@ static Val* prim_or(Val* args, Val* env) {
         }
     }
     return result;
-}
-
-static Val* prim_not(Val* args, Val* env) {
-    check_len(PRIM_NOT, args, eq, 1);
-    Val* result = eval(args->car, env);
-    if (result == FALSE) {
-        return TRUE;
-    } else {
-        return FALSE;
-    }
 }
 
 static void define_proc(Val* args, Val* env) {
@@ -936,7 +917,6 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_SUB, prim_sub, env);
     add_prim_proc(PRIM_MUL, prim_mul, env);
     add_prim_proc(PRIM_DIV, prim_div, env);
-    add_prim_proc(PRIM_ABS, prim_abs, env);
 
     add_prim_proc(PRIM_LT, prim_lt, env);
     add_prim_proc(PRIM_LTE, prim_lte, env);
@@ -953,7 +933,6 @@ static void define_prim_procs(Val* env) {
     add_prim_proc(PRIM_IF, prim_if, env);
     add_prim_proc(PRIM_AND, prim_and, env);
     add_prim_proc(PRIM_OR, prim_or, env);
-    add_prim_proc(PRIM_NOT, prim_not, env);
 
     add_prim_proc(PRIM_DEFINE, prim_define, env);
     add_prim_proc(PRIM_LAMBDA, prim_lambda, env);
