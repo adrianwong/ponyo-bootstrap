@@ -4,7 +4,7 @@
 #include <string.h>
 
 /*------------------------------------------------------------------------------
- | ERROR REPORTING
+ | ERROR LOGGING
  -----------------------------------------------------------------------------*/
 
 #define ERROR(...) {              \
@@ -58,10 +58,10 @@ struct Val {
 };
 
 // Constants.
-static Val* FALSE = &(Val){ TY_FALSE };
-static Val* TRUE = &(Val){ TY_TRUE };
+static Val* FALSE      = &(Val){ TY_FALSE };
+static Val* TRUE       = &(Val){ TY_TRUE };
 static Val* EMPTY_LIST = &(Val){ TY_EMPTY_LIST };
-static Val* VOID = &(Val){ TY_VOID };
+static Val* VOID       = &(Val){ TY_VOID };
 
 // A "table" for interned symbols.
 static Val* symbol_list;
@@ -78,8 +78,8 @@ static Val* global_env;
  | CONSTRUCTORS
  -----------------------------------------------------------------------------*/
 
+// No GC... yet?
 static Val* malloc_val(Type ty) {
-    // No GC... yet.
     Val* val = (Val*)malloc(sizeof(Val));
     if (val == NULL) {
         ERROR("out of memory");
@@ -125,7 +125,8 @@ static Val* make_string_or_symbol(Type ty, char* str) {
     return val;
 }
 
-// Returns a symbol if it already exists, creates it otherwise.
+// Returns a symbol if it has already been interned, creates (and interns) it
+// otherwise.
 static Val* intern_symbol(char* str) {
     for (Val* s = symbol_list; s != EMPTY_LIST; s = s->cdr) {
         if (strcmp(str, s->car->str) == 0) {
@@ -192,7 +193,8 @@ static int read_int(FILE* fp, int num) {
     return num;
 }
 
-// Assumes a '(' has already been read.
+// Assumes a '(' has already been read, and that `c` is a non-whitespace
+// character.
 static Val* read_list(FILE* fp, int c) {
     if (c == EOF) {
         ERROR("unterminated list");
@@ -309,6 +311,8 @@ static Val* read(FILE* fp) {
  | LIST HELPERS
  -----------------------------------------------------------------------------*/
 
+// Returns the length of a proper list. Returns -1 if the argument is not a list
+// or is an improper list.
 static int len(Val* list) {
     int len = 0;
     for (; list->ty == TY_PAIR; list = list->cdr) {
@@ -318,6 +322,7 @@ static int len(Val* list) {
     return list == EMPTY_LIST ? len : -1;
 }
 
+// Destructively reverses a list.
 static Val* rev(Val* list) {
     Val* prev = EMPTY_LIST;
     while (list != EMPTY_LIST) {
@@ -366,13 +371,11 @@ static void define_variable(Val* var, Val* val, Val* env) {
     Val* vars = first_frame->car;
     Val* vals = first_frame->cdr;
     for (; vars != EMPTY_LIST; vars = vars->cdr, vals = vals->cdr) {
-        // Change the binding if it exists.
         if (var == vars->car) {
             vals->car = val;
             return;
         }
     }
-    // If binding doesn't exist, adjoin one to the first frame.
     add_binding(var, val, first_frame);
 }
 
@@ -415,6 +418,7 @@ static Val* apply(Val* proc, Val* args, Val* env) {
             vars = cons(params->car, vars);
             vals = cons(eval(args->car, env), vals);
         }
+        // Handle improper lists (i.e. variable arity procedures).
         if (params != EMPTY_LIST) {
             vars = cons(params, vars);
             vars = rev(vars);
@@ -714,6 +718,7 @@ static void define_proc(Val* args, Val* env) {
     Val* body = args->cdr;
 
     check_typ(PRIM_DEFINE, name, TY_SYMBOL);
+    // Type checks both proper and improper lists.
     Val* p = params;
     for (; p->ty == TY_PAIR; p = p->cdr) {
         check_typ(PRIM_DEFINE, p->car, TY_SYMBOL);
@@ -745,6 +750,7 @@ static Val* prim_lambda(Val* args, Val* env) {
     check_len(PRIM_LAMBDA, args, gt, 1);
     Val* params = args->car;
 
+    // Type checks both proper and improper lists.
     Val* p = params;
     for (; p->ty == TY_PAIR; p = p->cdr) {
         check_typ(PRIM_LAMBDA, p->car, TY_SYMBOL);
@@ -870,7 +876,7 @@ static Val* prim_load(Val* args, Val* env) {
     return VOID;
 }
 
-// TODO Support input ports.
+// Partial implementation. Doesn't support input ports.
 static Val* prim_read(Val* args, Val* env) {
     check_len(PRIM_READ, args, eq, 0);
     return read(stdin);
@@ -878,6 +884,9 @@ static Val* prim_read(Val* args, Val* env) {
 
 static Val* collect_operands(Val* args, Val* env) {
     if (args->cdr == EMPTY_LIST) {
+        // Quote the elements of the (unwrapped) list. This is to inhibit their
+        // evaluation when they are passed in as arguments to the procedure that
+        // is invoked by `apply`. Feels rather janky.
         Val* list = eval(args->car, env);
         check_typ(PRIM_APPLY, list, TY_EMPTY_LIST | TY_PAIR);
         Val* quoted_list = EMPTY_LIST;
@@ -1055,7 +1064,8 @@ int main(void) {
     global_env = extend_env(EMPTY_LIST, EMPTY_LIST, global_env);
 
     define_prim_procs(global_env);
-    load_file("stdlib.scm", 0, global_env); // Load `stdlib.scm` by default.
+     // Load `stdlib.scm` by default.
+    load_file("stdlib.scm", 0, global_env);
     load(stdin, 1, global_env);
 
     return 0;
