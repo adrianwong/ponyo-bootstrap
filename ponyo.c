@@ -877,9 +877,15 @@ static Val* collect_operands(Val* args, Val* env) {
     if (args->cdr == EMPTY_LIST) {
         Val* list = eval(args->car, env);
         check_typ(PRIM_APPLY, list, TY_EMPTY_LIST | TY_PAIR);
-        return list;
+        Val* quoted_list = EMPTY_LIST;
+        for (; list != EMPTY_LIST; list = list->cdr) {
+            Val* quoted = cons(list->car, EMPTY_LIST);
+            quoted = cons(intern_symbol("quote"), quoted);
+            quoted_list = cons(quoted, quoted_list);
+        }
+        return rev(quoted_list);
     } else {
-        return cons(eval(args->car, env), collect_operands(args->cdr, env));
+        return cons(args->car, collect_operands(args->cdr, env));
     }
 }
 
@@ -888,7 +894,7 @@ static Val* prim_apply(Val* args, Val* env) {
     Val* proc = eval(args->car, env);
     check_typ(PRIM_APPLY, proc, TY_COMP_PROC | TY_PRIM_PROC);
     Val* operands = collect_operands(args->cdr, env);
-    return eval(cons(proc, operands), env);
+    return apply(proc, operands, env);
 }
 
 static void define_prim_procs(Val* env) {

@@ -429,15 +429,30 @@ test_fail display-fail-1 '(display)'
 test_fail display-fail-2 '(display 1 2)'
 
 println
-test apply-1 "(apply + '())" '0'
-test apply-2 "(apply + 1 2 '(3 4 5))" '15'
-test apply-3 "(define (test . ns)
+test apply-01 "(apply + '())" '0'
+test apply-02 "(apply + 1 2 '(3 4 5))" '15'
+test apply-03 "(define (test . ns)
                 (define (iter ns res)
                   (if (null? ns)
                       res
                       (iter (cdr ns) (+ res (* (car ns) (car ns))))))
               (iter ns 0))
               (apply test 1 2 3 4 '(5))" '55'
+test apply-04 "(define first
+                (lambda (ls)
+                  (apply (lambda (x . y) x) ls)))
+              (first '(a b c d))" 'a'
+test apply-05 "(define rest
+                (lambda (ls)
+                  (apply (lambda (x . y) y) ls)))
+              (rest '(a b c d))" '(b c d)'
+test apply-06 "(apply append
+                '(1 2 3)
+                '((a b) (c d e) (f)))" '(1 2 3 a b c d e f)'
+test apply-07 "(apply cons 1 '(()))" '(1)'
+test apply-08 "(apply cons '(1 ()))" '(1)'
+test apply-09 "(define a 3) (apply list 1 2 '(a))" '(1 2 a)'
+test apply-10 "(define a 2) (apply list 1 a '(3))" '(1 2 3)'
 test_fail apply-fail-1 "(apply)"
 test_fail apply-fail-2 "(apply 1)"
 test_fail apply-fail-3 "(apply 1 2)"
