@@ -425,6 +425,7 @@ test display-08 '(display "THIS.\nIS.\n\\"PONYO\\"!\n")' 'THIS.\nIS.\n"PONYO"!'
 test display-09 "(display 'sym)" 'sym'
 test display-10 '(display #t)' '#t'
 test display-11 '(display (if #t 12345))' '12345'
+test display-12 '(display (define x 1))' '#<void>'
 test_fail display-fail-1 '(display)'
 test_fail display-fail-2 '(display 1 2)'
 

@@ -28,6 +28,7 @@ typedef enum Type {
     TY_PRIM_PROC  = 1 << 6,
     TY_STRING     = 1 << 7,
     TY_SYMBOL     = 1 << 8,
+    TY_VOID       = 1 << 9,
 } Type;
 
 typedef struct Val Val;
@@ -60,6 +61,7 @@ struct Val {
 static Val* FALSE = &(Val){ TY_FALSE };
 static Val* TRUE = &(Val){ TY_TRUE };
 static Val* EMPTY_LIST = &(Val){ TY_EMPTY_LIST };
+static Val* VOID = &(Val){ TY_VOID };
 
 // A "table" for interned symbols.
 static Val* symbol_list;
@@ -450,6 +452,7 @@ static Val* eval(Val* val, Val* env) {
     case TY_INT:
     case TY_PRIM_PROC:
     case TY_STRING:
+    case TY_VOID:
         return val;
     case TY_EMPTY_LIST:
         ERROR("empty application: ()");
@@ -461,7 +464,7 @@ static Val* eval(Val* val, Val* env) {
     case TY_SYMBOL:
         return lookup_variable(val, env);
     }
-    return NULL;
+    return VOID; // Satisfies GCC. Should never happen.
 }
 
 /*------------------------------------------------------------------------------
@@ -665,7 +668,7 @@ static Val* prim_cond(Val* args, Val* env) {
         }
         return result;
     }
-    return NULL;
+    return VOID;
 }
 
 // Note: only `#f` is considered false in conditional expressions.
@@ -679,7 +682,7 @@ static Val* prim_if(Val* args, Val* env) {
         // If test yields a false value and no alternate is specified, the
         // result of the expression is unspecified.
         Val* altern = args->cdr->cdr;
-        return altern == EMPTY_LIST ? NULL : eval(altern->car, env);
+        return altern == EMPTY_LIST ? VOID : eval(altern->car, env);
     }
 }
 
@@ -735,7 +738,7 @@ static Val* prim_define(Val* args, Val* env) {
     } else {
         ERROR("%s: argument is not a symbol or a pair", PRIM_DEFINE);
     }
-    return NULL;
+    return VOID;
 }
 
 static Val* prim_lambda(Val* args, Val* env) {
@@ -786,7 +789,7 @@ static Val* prim_set(Val* args, Val* env) {
     check_typ(PRIM_SET, var, TY_SYMBOL);
     Val* val = eval(args->cdr->car, env);
     set_variable(var, val, env);
-    return NULL;
+    return VOID;
 }
 
 static Val* prim_set_car(Val* args, Val* env) {
@@ -795,7 +798,7 @@ static Val* prim_set_car(Val* args, Val* env) {
     check_typ(PRIM_SET_CAR, var, TY_PAIR);
     Val* val = eval(args->cdr->car, env);
     var->car = val;
-    return NULL;
+    return VOID;
 }
 
 static Val* prim_set_cdr(Val* args, Val* env) {
@@ -804,7 +807,7 @@ static Val* prim_set_cdr(Val* args, Val* env) {
     check_typ(PRIM_SET_CDR, var, TY_PAIR);
     Val* val = eval(args->cdr->car, env);
     var->cdr = val;
-    return NULL;
+    return VOID;
 }
 
 static void add_prim_proc(char* name, PrimProc* p, Val* env) {
@@ -855,7 +858,7 @@ static Val* prim_display(Val* args, Val* env) {
     } else {
         print(val);
     }
-    return NULL;
+    return VOID;
 }
 
 static void load_file(char* path, char print_vals, Val* env);
@@ -864,7 +867,7 @@ static Val* prim_load(Val* args, Val* env) {
     check_len(PRIM_LOAD, args, eq, 1);
     check_typ(PRIM_LOAD, args->car, TY_STRING);
     load_file(args->car->str, 0, env);
-    return NULL;
+    return VOID;
 }
 
 // TODO Support input ports.
@@ -1017,6 +1020,9 @@ static void print(Val* val) {
     case TY_SYMBOL:
         printf("%s", val->str);
         break;
+    case TY_VOID:
+        printf("#<void>");
+        break;
     }
 }
 
@@ -1027,7 +1033,7 @@ static void print(Val* val) {
 static void load(FILE* fp, char print_vals, Val* env) {
     for (Val* val = read(fp); val != NULL; val = read(fp)) {
         val = eval(val, env);
-        if (val != NULL && print_vals) {
+        if (print_vals && val != VOID) {
             print(val);
             printf("\n");
         }
