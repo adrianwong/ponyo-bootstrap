@@ -816,12 +816,6 @@ static Val* prim_set_cdr(Val* args, Val* env) {
     return VOID;
 }
 
-static void add_prim_proc(char* name, PrimProc* p, Val* env) {
-    Val* sym = intern_symbol(name);
-    Val* proc = make_prim_proc(p);
-    define_variable(sym, proc, env);
-}
-
 static Val* prim_is_type(Val* args, Val* env, char* proc, Type ty) {
     check_len(proc, args, eq, 1);
     Val* val = eval(args->car, env);
@@ -907,6 +901,12 @@ static Val* prim_apply(Val* args, Val* env) {
     check_typ(PRIM_APPLY, proc, TY_COMP_PROC | TY_PRIM_PROC);
     Val* operands = collect_operands(args->cdr, env);
     return apply(proc, operands, env);
+}
+
+static void add_prim_proc(char* name, PrimProc* p, Val* env) {
+    Val* sym = intern_symbol(name);
+    Val* proc = make_prim_proc(p);
+    define_variable(sym, proc, env);
 }
 
 static void define_prim_procs(Val* env) {
@@ -1064,7 +1064,7 @@ int main(void) {
     global_env = extend_env(EMPTY_LIST, EMPTY_LIST, global_env);
 
     define_prim_procs(global_env);
-     // Load `stdlib.scm` by default.
+    // Load `stdlib.scm` by default.
     load_file("stdlib.scm", 0, global_env);
     load(stdin, 1, global_env);
 
