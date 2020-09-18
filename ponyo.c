@@ -37,6 +37,10 @@ typedef Val* PrimProc(Val* args, Val* env);
 struct Val {
     Type ty;
 
+    // Memory management.
+    char marked;
+    Val* next;
+
     union {
         // Compound procedure.
         struct {
@@ -76,19 +80,129 @@ static Val* symbol_list;
 static Val* global_env;
 
 /*------------------------------------------------------------------------------
- | CONSTRUCTORS
+ | MEMORY MANAGEMENT
  -----------------------------------------------------------------------------*/
 
-// No GC... yet?
-static Val* malloc_val(Type ty) {
-    Val* val = (Val*)malloc(sizeof(Val));
-    assert(val);
+#define HEAP_SIZE 50000
+#define ROOTS_MAX 10000
+
+#define PUSH_ROOT(v)                  \
+    push_root(&v);
+
+#define DEF_ROOT1(v1)                 \
+    Val* v1 = VOID;                   \
+    PUSH_ROOT(v1)
+
+#define DEF_ROOT2(v1, v2)             \
+    DEF_ROOT1(v1)                     \
+    Val* v2 = VOID;                   \
+    PUSH_ROOT(v2)
+
+#define DEF_ROOT3(v1, v2, v3)         \
+    DEF_ROOT2(v1, v2)                 \
+    Val* v3 = VOID;                   \
+    PUSH_ROOT(v3)
+
+#define DEF_ROOT4(v1, v2, v3, v4)     \
+    DEF_ROOT3(v1, v2, v3)             \
+    Val* v4 = VOID;                   \
+    PUSH_ROOT(v4)
+
+#define DEF_ROOT5(v1, v2, v3, v4, v5) \
+    DEF_ROOT4(v1, v2, v3, v4)         \
+    Val* v5 = VOID;                   \
+    PUSH_ROOT(v5)
+
+#define POP_ROOT1()             pop_root();
+#define POP_ROOT2() POP_ROOT1() pop_root();
+#define POP_ROOT3() POP_ROOT2() pop_root();
+#define POP_ROOT4() POP_ROOT3() pop_root();
+#define POP_ROOT5() POP_ROOT4() pop_root();
+
+static Val heap[HEAP_SIZE];
+static Val* free_list;
+
+static Val** roots[ROOTS_MAX];
+static int roots_size;
+
+static void push_root(Val** val) {
+    assert(roots_size < ROOTS_MAX);
+    roots[roots_size++] = val;
+}
+
+static void pop_root(void) {
+    assert(roots_size > 0);
+    roots[--roots_size] = NULL;
+}
+
+static void mark(Val* val) {
+    if (val->marked) { return; }
+    val->marked = 1;
+    if (val->ty == TY_COMP_PROC) {
+        mark(val->params);
+        mark(val->body);
+        mark(val->env);
+    } else if (val->ty == TY_PAIR) {
+        mark(val->car);
+        mark(val->cdr);
+    }
+}
+
+static void mark_all(void) {
+    for (int i = 0; i < roots_size; i++) {
+        mark(*roots[i]);
+    }
+}
+
+static void free_val(Val* val) {
+    val->next = free_list;
+    free_list = val;
+}
+
+static void sweep(void) {
+    free_list = NULL;
+    for (int i = 0; i < HEAP_SIZE; i++) {
+        Val* val = &heap[i];
+        if (!val->marked) {
+            if (val->ty == TY_STRING || val->ty == TY_SYMBOL) {
+                free(val->str);
+            }
+            free_val(val);
+        } else {
+            val->marked = 0;
+        }
+    }
+}
+
+static Val* alloc_val(Type ty) {
+    if (!free_list) {
+        mark_all();
+        sweep();
+        if (!free_list) {
+            ERROR("heap exhausted");
+        }
+    }
+    Val* val = free_list;
+    free_list = free_list->next;
     val->ty = ty;
+    val->marked = 0;
+    val->next = NULL;
     return val;
 }
 
+static void init_heap(void) {
+    free_list = NULL;
+    for (int i = 0; i < HEAP_SIZE; i++) {
+        free_val(&heap[i]);
+    }
+}
+
+/*------------------------------------------------------------------------------
+ | CONSTRUCTORS
+ -----------------------------------------------------------------------------*/
+
 static Val* make_comp_proc(Val* params, Val* body, Val* env) {
-    Val* val = malloc_val(TY_COMP_PROC);
+    Val* val = alloc_val(TY_COMP_PROC);
     val->params = params;
     val->body = body;
     val->env = env;
@@ -96,27 +210,27 @@ static Val* make_comp_proc(Val* params, Val* body, Val* env) {
 }
 
 static Val* make_int(int num) {
-    Val* val = malloc_val(TY_INT);
+    Val* val = alloc_val(TY_INT);
     val->num = num;
     return val;
 }
 
 static Val* cons(Val* car, Val* cdr) {
-    Val* val = malloc_val(TY_PAIR);
+    Val* val = alloc_val(TY_PAIR);
     val->car = car;
     val->cdr = cdr;
     return val;
 }
 
 static Val* make_prim_proc(PrimProc* proc) {
-    Val* val = malloc_val(TY_PRIM_PROC);
+    Val* val = alloc_val(TY_PRIM_PROC);
     val->proc = proc;
     return val;
 }
 
 static Val* make_string_or_symbol(Type ty, char* str) {
     assert(ty == TY_STRING || ty == TY_SYMBOL);
-    Val* val = malloc_val(ty);
+    Val* val = alloc_val(ty);
     val->str = (char*)malloc(strlen(str) + 1);
     assert(val->str);
     strcpy(val->str, str);
@@ -131,8 +245,10 @@ static Val* intern_symbol(char* str) {
             return s->car;
         }
     }
-    Val* sym = make_string_or_symbol(TY_SYMBOL, str);
+    DEF_ROOT1(sym);
+    sym = make_string_or_symbol(TY_SYMBOL, str);
     symbol_list = cons(sym, symbol_list);
+    POP_ROOT1();
     return sym;
 }
 
@@ -199,30 +315,36 @@ static Val* read_pair(FILE* fp, int c) {
     } else if (c == ')') {
         return EMPTY_LIST;
     }
-    // NULL check unnecessary due to earlier EOF check.
-    Val* car = read_c(fp, c);
 
+    DEF_ROOT2(car, cdr);
+    // NULL check unnecessary due to earlier EOF check.
+    car = read_c(fp, c);
     c = get_non_whitespace_char(fp);
     if (c == '.') {
         // NULL check unnecessary due to subsequent ')' check.
-        Val* cdr = read(fp);
+        cdr = read(fp);
         if (get_non_whitespace_char(fp) != ')') {
             ERROR("expected list terminator");
         }
-        return cons(car, cdr);
     } else {
-        Val* cdr = read_pair(fp, c);
-        return cons(car, cdr);
+        cdr = read_pair(fp, c);
     }
+    Val* pair = cons(car, cdr);
+    POP_ROOT2();
+    return pair;
 }
 
 static Val* read_quote(FILE* fp) {
-    Val* quote = read(fp);
+    DEF_ROOT2(sym, quote);
+    sym = intern_symbol("quote");
+    quote = read(fp);
     if (!quote) {
         ERROR("unexpected EOF reading quote");
     }
-    Val* sym = intern_symbol("quote");
-    return cons(sym, cons(quote, EMPTY_LIST));
+    quote = cons(quote, EMPTY_LIST);
+    quote = cons(sym, quote);
+    POP_ROOT2();
+    return quote;
 }
 
 static Val* read_string(FILE* fp) {
@@ -338,7 +460,11 @@ static Val* rev(Val* list) {
 
 static Val* extend_env(Val* vars, Val* vals, Val* env) {
     assert(len(vars) == len(vals));
-    return cons(cons(vars, vals), env);
+    DEF_ROOT1(ext_env);
+    ext_env = cons(vars, vals);
+    ext_env = cons(ext_env, env);
+    POP_ROOT1();
+    return ext_env;
 }
 
 static Val* lookup_variable(Val* var, Val* env) {
@@ -401,9 +527,10 @@ static Val* apply(Val* proc, Val* args, Val* env) {
         return proc->proc(args, env);
     } else if (proc->ty == TY_COMP_PROC) {
         Val* params = proc->params;
-        Val* vars = EMPTY_LIST;
-        Val* vals = EMPTY_LIST;
+        DEF_ROOT5(vars, vals, temp, penv, result);
 
+        vars = EMPTY_LIST;
+        vals = EMPTY_LIST;
         // Extend the base environment carried by the procedure to include a
         // frame that binds the parameters of the procedure to the arguments
         // to which the procedure is to be applied.
@@ -412,32 +539,37 @@ static Val* apply(Val* proc, Val* args, Val* env) {
                 ERROR("too few arguments to procedure");
             }
             vars = cons(params->car, vars);
-            vals = cons(eval(args->car, env), vals);
+            temp = eval(args->car, env);
+            vals = cons(temp, vals);
         }
         // Handle improper lists (i.e. variable arity procedures).
         if (params != EMPTY_LIST) {
             vars = cons(params, vars);
             vars = rev(vars);
 
-            Val* varargs = EMPTY_LIST;
+            DEF_ROOT1(varargs);
+            varargs = EMPTY_LIST;
             for (; args != EMPTY_LIST; args = args->cdr) {
-                varargs = cons(eval(args->car, env), varargs);
+                temp = eval(args->car, env);
+                varargs = cons(temp, varargs);
             }
-            vals = cons(rev(varargs), vals);
+            varargs = rev(varargs);
+            vals = cons(varargs, vals);
             vals = rev(vals);
+            POP_ROOT1();
         } else {
             if (args != EMPTY_LIST) {
                 ERROR("too many arguments to procedure");
             }
         }
 
-        Val* penv = extend_env(vars, vals, proc->env);
+        penv = extend_env(vars, vals, proc->env);
         // Evaluate the expressions in the procedure body, returning the
         // result of the final expression.
-        Val* result = VOID;
         for (Val* b = proc->body; b != EMPTY_LIST; b = b->cdr) {
             result = eval(b->car, penv);
         }
+        POP_ROOT5();
         return result;
     } else {
         ERROR("unknown procedure type");
@@ -457,9 +589,12 @@ static Val* eval(Val* val, Val* env) {
     case TY_EMPTY_LIST:
         ERROR("empty application: ()");
     case TY_PAIR: {
-        Val* proc = eval(val->car, env);
-        Val* args = val->cdr;
-        return apply(proc, args, env);
+        DEF_ROOT2(proc, args);
+        proc = eval(val->car, env);
+        args = val->cdr;
+        Val* result = apply(proc, args, env);
+        POP_ROOT2();
+        return result;
     }
     case TY_SYMBOL:
         return lookup_variable(val, env);
@@ -642,9 +777,12 @@ static Val* prim_cdr(Val* args, Val* env) {
 
 static Val* prim_cons(Val* args, Val* env) {
     check_len(PRIM_CONS, args, eq, 2);
-    Val* head = eval(args->car, env);
-    Val* tail = eval(args->cdr->car, env);
-    return cons(head, tail);
+    DEF_ROOT2(car, cdr);
+    car = eval(args->car, env);
+    cdr = eval(args->cdr->car, env);
+    Val* pair = cons(car, cdr);
+    POP_ROOT2();
+    return pair;
 }
 
 static Val* prim_cond(Val* args, Val* env) {
@@ -723,8 +861,10 @@ static void define_proc(Val* args, Val* env) {
         check_typ(PRIM_DEFINE, p, TY_SYMBOL);
     }
 
-    Val* proc = make_comp_proc(params, body, env);
+    DEF_ROOT1(proc);
+    proc = make_comp_proc(params, body, env);
     define_variable(name, proc, env);
+    POP_ROOT1();
 }
 
 static Val* prim_define(Val* args, Val* env) {
@@ -732,8 +872,10 @@ static Val* prim_define(Val* args, Val* env) {
     Val* var = args->car;
     if (var->ty == TY_SYMBOL) {
         check_len(PRIM_DEFINE, args->cdr, eq, 1);
-        Val* val = eval(args->cdr->car, env);
+        DEF_ROOT1(val);
+        val = eval(args->cdr->car, env);
         define_variable(var, val, env);
+        POP_ROOT1();
     } else if (var->ty == TY_PAIR) {
         define_proc(args, env);
     } else {
@@ -762,8 +904,9 @@ static Val* prim_lambda(Val* args, Val* env) {
 // Desugars `(let ((var val)) body)` to `((lambda (var) body) val)`.
 static Val* prim_let(Val* args, Val* env) {
     check_len(PRIM_LET, args, gt, 1);
-    Val* vars = EMPTY_LIST;
-    Val* vals = EMPTY_LIST;
+    DEF_ROOT3(vars, vals, lambda);
+    vars = EMPTY_LIST;
+    vals = EMPTY_LIST;
     for (Val* b = args->car; b != EMPTY_LIST; b = b->cdr) {
         check_typ(PRIM_LET, b->car, TY_PAIR);
         check_len(PRIM_LET, b->car, eq, 2);
@@ -776,8 +919,10 @@ static Val* prim_let(Val* args, Val* env) {
         vals = cons(val, vals);
     }
     Val* body = args->cdr;
-    Val* lambda = make_comp_proc(vars, body, env);
-    return eval(cons(lambda, vals), env);
+    lambda = make_comp_proc(vars, body, env);
+    Val* let = cons(lambda, vals);
+    POP_ROOT3();
+    return eval(let, env);
 }
 
 static Val* prim_quote(Val* args, Val* env) {
@@ -873,36 +1018,45 @@ static Val* prim_read(Val* args, Val* env) {
 }
 
 static Val* collect_operands(Val* args, Val* env) {
-    if (args->cdr == EMPTY_LIST) {
-        // Quote the elements of the (unwrapped) list. This is to inhibit their
-        // evaluation when they are passed in as arguments to the procedure that
-        // is invoked by `apply`. Feels rather janky.
-        Val* list = eval(args->car, env);
-        check_typ(PRIM_APPLY, list, TY_EMPTY_LIST | TY_PAIR);
-        Val* quoted_list = EMPTY_LIST;
-        for (; list != EMPTY_LIST; list = list->cdr) {
-            Val* quoted = cons(list->car, EMPTY_LIST);
-            quoted = cons(intern_symbol("quote"), quoted);
-            quoted_list = cons(quoted, quoted_list);
-        }
-        return rev(quoted_list);
-    } else {
-        return cons(args->car, collect_operands(args->cdr, env));
+    DEF_ROOT3(sym, operands, quoted);
+    sym = intern_symbol("quote");
+
+    operands = EMPTY_LIST;
+    for (; args->cdr != EMPTY_LIST; args = args->cdr) {
+        operands = cons(args->car, operands);
     }
+    // Quote the elements of the (unwrapped) list. This is to inhibit their
+    // evaluation when they are passed in as arguments to the procedure that
+    // is invoked by `apply`. Feels rather janky.
+    Val* end_list = eval(args->car, env);
+    check_typ(PRIM_APPLY, end_list, TY_EMPTY_LIST | TY_PAIR);
+    for (; end_list != EMPTY_LIST; end_list = end_list->cdr) {
+        quoted = cons(end_list->car, EMPTY_LIST);
+        quoted = cons(sym, quoted);
+        operands = cons(quoted, operands);
+    }
+    operands = rev(operands);
+    POP_ROOT3();
+    return operands;
 }
 
 static Val* prim_apply(Val* args, Val* env) {
     check_len(PRIM_APPLY, args, gt, 1);
-    Val* proc = eval(args->car, env);
+    DEF_ROOT2(proc, operands);
+    proc = eval(args->car, env);
     check_typ(PRIM_APPLY, proc, TY_COMP_PROC | TY_PRIM_PROC);
-    Val* operands = collect_operands(args->cdr, env);
-    return apply(proc, operands, env);
+    operands = collect_operands(args->cdr, env);
+    Val* result = apply(proc, operands, env);
+    POP_ROOT2();
+    return result;
 }
 
 static void add_prim_proc(char* name, PrimProc* p, Val* env) {
-    Val* sym = intern_symbol(name);
-    Val* proc = make_prim_proc(p);
+    DEF_ROOT2(sym, proc);
+    sym = intern_symbol(name);
+    proc = make_prim_proc(p);
     define_variable(sym, proc, env);
+    POP_ROOT2();
 }
 
 static void define_prim_procs(Val* env) {
@@ -1036,13 +1190,15 @@ static void print(Val* val) {
  -----------------------------------------------------------------------------*/
 
 static void load(FILE* fp, char print_vals, Val* env) {
-    for (Val* val = read(fp); val; val = read(fp)) {
+    DEF_ROOT1(val);
+    for (val = read(fp); val; val = read(fp)) {
         val = eval(val, env);
         if (print_vals && val != VOID) {
             print(val);
             printf("\n");
         }
     }
+    POP_ROOT1();
 }
 
 static void load_file(char* path, char print_vals, Val* env) {
@@ -1055,6 +1211,10 @@ static void load_file(char* path, char print_vals, Val* env) {
 }
 
 int main(void) {
+    init_heap();
+
+    PUSH_ROOT(symbol_list);
+    PUSH_ROOT(global_env);
     symbol_list = EMPTY_LIST;
     global_env = EMPTY_LIST;
     global_env = extend_env(EMPTY_LIST, EMPTY_LIST, global_env);

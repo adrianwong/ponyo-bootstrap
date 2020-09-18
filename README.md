@@ -23,7 +23,9 @@ $ make test
 
 ## TODO
 
-* [ ] Implement garbage collector.
+* [x] Implement garbage collector. (This was undertaken as a learning exercise.
+The changes cloud the implementation a fair bit, read [this][6] to understand
+why.)
 
 ## Metacircular
 
@@ -86,9 +88,14 @@ bar
 * [Scheme from Scratch][3]
 * [SICP][4]
 * [The Scheme Programming Language, 4th Edition][5]
+* [Baby's First Garbage Collector][7]
+* [GC in 50 lines][8]
 
 [1]: https://craftinginterpreters.com
 [2]: https://github.com/rui314/minilisp
 [3]: http://michaux.ca/articles/scheme-from-scratch-introduction
 [4]: https://mitpress.mit.edu/sites/default/files/sicp/index.html
 [5]: https://www.scheme.com/tspl4/
+[6]: http://peter.michaux.ca/articles/scheme-from-scratch-bootstrap-v0_22-garbage-collection
+[7]: https://journal.stuffwithstuff.com/2013/12/08/babys-first-garbage-collector/
+[8]: https://github.com/jorendorff/gc-in-50-lines
