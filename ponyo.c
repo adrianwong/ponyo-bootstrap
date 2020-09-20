@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,6 +117,7 @@ static Val* make_prim_proc(PrimProc* proc) {
 }
 
 static Val* make_string_or_symbol(Type ty, char* str) {
+    assert(ty == TY_STRING || ty == TY_SYMBOL);
     Val* val = malloc_val(ty);
     val->str = (char*)malloc(strlen(str) + 1);
     if (val->str == NULL) {
