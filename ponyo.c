@@ -82,9 +82,7 @@ static Val* global_env;
 // No GC... yet?
 static Val* malloc_val(Type ty) {
     Val* val = (Val*)malloc(sizeof(Val));
-    if (val == NULL) {
-        ERROR("out of memory");
-    }
+    assert(val);
     val->ty = ty;
     return val;
 }
@@ -120,9 +118,7 @@ static Val* make_string_or_symbol(Type ty, char* str) {
     assert(ty == TY_STRING || ty == TY_SYMBOL);
     Val* val = malloc_val(ty);
     val->str = (char*)malloc(strlen(str) + 1);
-    if (val->str == NULL) {
-        ERROR("out of memory");
-    }
+    assert(val->str);
     strcpy(val->str, str);
     return val;
 }
@@ -341,9 +337,7 @@ static Val* rev(Val* list) {
  -----------------------------------------------------------------------------*/
 
 static Val* extend_env(Val* vars, Val* vals, Val* env) {
-    if (len(vars) != len(vals)) {
-        ERROR("length of vars and vals do not match");
-    }
+    assert(len(vars) == len(vals));
     return cons(cons(vars, vals), env);
 }
 
