@@ -5,7 +5,7 @@ in C. Its raison d'être is to bootstrap __ponyo__, a self-hosting Scheme-to-?
 compiler.
 
 To that end, __ponyo-bootstrap__ is a quick-and-dirty implementation, but not
-_so_ quick-and-dirty such that it makes debugging Scheme programs overly
+_so_ quick-and-dirty such that it would make debugging Scheme programs overly
 difficult.
 
 ## Use
@@ -23,24 +23,13 @@ $ make test
 
 ## TODO
 
-* [ ] Garbage collector.
+* [ ] Implement garbage collector.
 
 ## Metacircular
 
-Several years ago, late to the programming party but filled with the enthusiasm
-of having embraced a new career, I decided that working my way through [SICP][4]
-was how I would "get good". This is how it went:
-
-> **Wise old man of Chapter 4:** Child, you have braved the elements, slashed
-your way through four hundred pages of dense text, and battled courageously
-against two hundred exercises in order to reach my doorstep. You have earned the
-right: ask your question, and I shall answer.
->
-> **Me**: I'm tired. Do you have any pie?
-
-Several years later, I still have no intention of completing the journey I
-started. However! __ponyo-bootstrap__ _can_ run the metacircular evaluator from
-Chapter 4! Surely that counts for something?
+__ponyo-bootstrap__ can run the metacircular evaluator from [SICP][4] Chapter
+4.1. This is a source of some amusement to me, as I made a start on the chapter
+some several years back but never got around to finishing it.
 
 ```scheme
 $ ./ponyo
