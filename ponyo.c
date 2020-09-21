@@ -218,7 +218,7 @@ static Val* read_pair(FILE* fp, int c) {
 
 static Val* read_quote(FILE* fp) {
     Val* quote = read(fp);
-    if (quote == NULL) {
+    if (!quote) {
         ERROR("unexpected EOF reading quote");
     }
     Val* sym = intern_symbol("quote");
@@ -1036,7 +1036,7 @@ static void print(Val* val) {
  -----------------------------------------------------------------------------*/
 
 static void load(FILE* fp, char print_vals, Val* env) {
-    for (Val* val = read(fp); val != NULL; val = read(fp)) {
+    for (Val* val = read(fp); val; val = read(fp)) {
         val = eval(val, env);
         if (print_vals && val != VOID) {
             print(val);
@@ -1047,7 +1047,7 @@ static void load(FILE* fp, char print_vals, Val* env) {
 
 static void load_file(char* path, char print_vals, Val* env) {
     FILE* fp = fopen(path, "r");
-    if (fp == NULL) {
+    if (!fp) {
         ERROR("could not load '%s'", path);
     }
     load(fp, print_vals, env);
