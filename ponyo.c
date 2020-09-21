@@ -434,7 +434,7 @@ static Val* apply(Val* proc, Val* args, Val* env) {
         Val* penv = extend_env(vars, vals, proc->env);
         // Evaluate the expressions in the procedure body, returning the
         // result of the final expression.
-        Val* result;
+        Val* result = VOID;
         for (Val* b = proc->body; b != EMPTY_LIST; b = b->cdr) {
             result = eval(b->car, penv);
         }
@@ -662,7 +662,7 @@ static Val* prim_cond(Val* args, Val* env) {
                 continue;
             }
         }
-        Val* result;
+        Val* result = VOID;
         for (; exps != EMPTY_LIST; exps = exps->cdr) {
             result = eval(exps->car, env);
         }
