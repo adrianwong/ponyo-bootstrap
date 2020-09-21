@@ -193,7 +193,7 @@ static int read_int(FILE* fp, int num) {
 
 // Assumes a '(' has already been read, and that `c` is a non-whitespace
 // character.
-static Val* read_list(FILE* fp, int c) {
+static Val* read_pair(FILE* fp, int c) {
     if (c == EOF) {
         ERROR("unterminated list");
     } else if (c == ')') {
@@ -211,7 +211,7 @@ static Val* read_list(FILE* fp, int c) {
         }
         return cons(car, cdr);
     } else {
-        Val* cdr = read_list(fp, c);
+        Val* cdr = read_pair(fp, c);
         return cons(car, cdr);
     }
 }
@@ -283,7 +283,7 @@ static Val* read_c(FILE* fp, int c) {
         return read_string(fp);
     }
     if (c == '(') {
-        return read_list(fp, get_non_whitespace_char(fp));
+        return read_pair(fp, get_non_whitespace_char(fp));
     }
     if (c == '\'') {
         return read_quote(fp);
